@@ -1,16 +1,23 @@
 'use client';
 
+import { useState, useRef, useEffect } from 'react';
 import { PerformanceJoined } from '@/utils/dataFetcher';
 
 interface Props {
   data: PerformanceJoined;
   isSelected: boolean;
   onToggle: () => void;
-  style?: React.CSSProperties; // 위치 지정을 위한 style prop 추가
+  style?: React.CSSProperties;
 }
 
 export default function PerformanceCard({ data, isSelected, onToggle, style }: Props) {
-  // 시간 포맷팅 (예: 13:10)
+  // 👁️ UI 표시용 State (렌더링 유발)
+  const [isPeeking, setIsPeeking] = useState(false);
+  
+  // ⚡ 로직 판단용 Ref (즉시 반영, 렌더링 X)
+  const isLongPress = useRef(false);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
   const formatTime = (isoString: string) => {
     const date = new Date(isoString);
     return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
@@ -18,43 +25,85 @@ export default function PerformanceCard({ data, isSelected, onToggle, style }: P
 
   const timeRange = `${formatTime(data.startTime)} - ${formatTime(data.endTime)}`;
 
-  // 지속 시간 계산 (분 단위)
-  const start = new Date(data.startTime).getTime();
-  const end = new Date(data.endTime).getTime();
-  const durationMin = (end - start) / (1000 * 60);
+  // 👇 1. 터치 시작
+  const handlePointerDown = () => {
+    // 초기화
+    isLongPress.current = false; 
+    if (timerRef.current) clearTimeout(timerRef.current);
+
+    // 200ms 뒤에 "롱프레스"로 판단
+    timerRef.current = setTimeout(() => {
+      isLongPress.current = true; // 로직용 플래그 ON
+      setIsPeeking(true);         // UI용 상태 ON (카드 확장)
+    }, 200);
+  };
+
+  // 👇 2. 터치 종료 (손을 뗄 때 or 밖으로 나갈 때)
+  const handlePointerUpOrLeave = (e: React.PointerEvent) => {
+    // 타이머 취소 (아직 200ms 안 지났으면 롱프레스 아님)
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+
+    if (isLongPress.current) {
+      // A. 꾹 눌렀다 뗀 경우 (롱프레스 O)
+      // -> 미리보기만 끄고, 토글은 실행하지 않음
+      setIsPeeking(false);
+      isLongPress.current = false;
+    } else {
+      // B. 짧게 탭한 경우 (롱프레스 X)
+      // -> 토글(선택) 실행
+      // (단, 드래그로 나간 경우가 아닐 때만)
+      if (e.type === 'pointerup') {
+        onToggle();
+      }
+    }
+  };
+
+  // 컴포넌트 언마운트 시 정리
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
 
   return (
     <div
-      onClick={(e) => {
-        e.stopPropagation(); // 부모 클릭 이벤트 방지
-        onToggle();
-      }}
-      style={style}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUpOrLeave}
+      onPointerLeave={handlePointerUpOrLeave}
+      // 🚨 모바일에서 꾹 누를 때 시스템 메뉴(우클릭) 뜨는 것 방지
+      onContextMenu={(e) => e.preventDefault()}
+      
+      style={{ ...style, minHeight: style?.height }}
       className={`
-        absolute w-full rounded-lg border p-2 cursor-pointer transition-all duration-200 overflow-hidden group hover:z-10
+        absolute w-full rounded-md border cursor-pointer transition-all duration-200 overflow-hidden group select-none touch-none
+        
+        hover:z-50 hover:scale-[1.05] hover:shadow-xl hover:!h-auto
+        
+        ${/* 롱프레스 상태일 때 스타일 적용 */''}
+        ${isPeeking ? 'z-50 scale-[1.05] shadow-xl !h-auto' : ''}
+        
         ${isSelected
-          ? 'bg-blue-600 border-blue-400 shadow-lg shadow-blue-900/50 text-white' 
-          : 'bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700'}
+          ? 'bg-blue-600 border-blue-400 shadow-lg shadow-blue-900/50 text-white z-20' 
+          : 'bg-gray-800/90 border-gray-700 text-gray-300 hover:bg-gray-700 hover:border-gray-500'}
       `}
     >
-      {/* 장식용 바 */}
-      <div className={`absolute left-0 top-0 bottom-0 w-1 transition-colors ${isSelected ? 'bg-white' : 'bg-blue-500'}`} />
+      <div className={`absolute left-0 top-0 bottom-0 w-0.5 transition-colors ${isSelected ? 'bg-white' : 'bg-blue-500'}`} />
 
-      <div className="pl-2 h-full flex flex-col justify-center overflow-hidden"> {/* overflow-hidden 추가 */}
-        {/* truncate 추가하여 너무 긴 제목은 ... 처리 */}
-        <h3 className="font-bold text-sm leading-tight mb-0.5 truncate pr-1">
+      <div className="pl-2 pr-1 py-1 h-full flex flex-col justify-center pointer-events-none">
+        <h3 className={`
+          font-bold text-xs leading-tight mb-0.5 truncate 
+          group-hover:whitespace-normal group-hover:overflow-visible
+          ${isPeeking ? 'whitespace-normal overflow-visible' : ''}
+        `}>
           {data.artist.name}
         </h3>
         
-        {/* 폰트 사이즈 조절 및 줄바꿈 방지 */}
-        <p className={`text-[10px] md:text-[11px] font-mono whitespace-nowrap ${isSelected ? 'text-blue-100' : 'text-gray-400'}`}>
+        <p className={`text-[10px] font-mono leading-none ${isSelected ? 'text-blue-100' : 'text-gray-400/80'}`}>
           {timeRange}
         </p>
-        
-        {/* [수정] hidden md:block 제거 -> 항상 보이게 설정 */}
-        <span className="text-[9px] md:text-[10px] opacity-60 mt-auto">
-          {Math.floor(durationMin)} min
-        </span>
       </div>
     </div>
   );

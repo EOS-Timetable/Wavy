@@ -5,8 +5,8 @@ import DaySelector from './DaySelector';
 interface TimetableHeaderProps {
   title: string;
   days: string[];
-  currentDay: string;
-  onSelectDay: (day: string) => void;
+  currentDay: number;
+  onSelectDay: (dayNum: number) => void;
 }
 
 export default function TimetableHeader({ title, days, currentDay, onSelectDay }: TimetableHeaderProps) {

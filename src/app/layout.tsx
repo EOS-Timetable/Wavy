@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import Script from "next/script";
 
 // 1. 뷰포트 설정 (모바일 최적화)
 export const viewport: Viewport = {

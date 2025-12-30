@@ -22,6 +22,7 @@ export interface PerformanceJoined {
   endTime: string;   // ISO String
   artist: Artist;
   stage: Stage;
+  dayNumber: number;
 }
 
 // --- Helper Functions (Async로 변경) ---
@@ -84,28 +85,18 @@ export const getFestivalDates = async (festivalId: string): Promise<string[]> =>
 // 4. 특정 날짜의 공연 데이터 가져오기 (핵심 조인)
 export const getPerformancesByDay = async (
   festivalId: string,
-  dateString: string
+  dayNumber: number
 ): Promise<PerformanceJoined[]> => {
-  // 해당 날짜의 00:00 ~ 24:00+alpha 범위 설정
-  // (새벽 4시 공연도 해당 날짜로 쳐주기 위해 넉넉하게 다음날 06:00까지 가져옵니다)
-  const targetDate = new Date(dateString);
-  const nextDate = new Date(targetDate);
-  nextDate.setDate(nextDate.getDate() + 1);
-  nextDate.setHours(6, 0, 0, 0); // 다음날 새벽 6시까지
-
-  const startTimeStr = `${dateString}T00:00:00`;
-  const endTimeStr = nextDate.toISOString();
-
+  
   const { data, error } = await supabase
     .from("performances")
     .select(`
-      id, start_time, end_time, stage_id,
-      stage:stages ( id, name, color, festival_id ),
-      artist:artists ( id, name, image_url )
+      *,
+      stage:stages ( * ),
+      artist:artists ( * )
     `)
     .eq("festival_id", festivalId)
-    .gte("start_time", startTimeStr) // 시작 시간 >= 오늘 00:00
-    .lt("start_time", endTimeStr)    // 시작 시간 < 다음날 06:00
+    .eq("day_number", dayNumber) // ✅ 핵심: DB에 적힌 '일차'로만 가져옴 (시간 계산 X)
     .order("start_time");
 
   if (error || !data) {
@@ -130,5 +121,6 @@ export const getPerformancesByDay = async (
       name: p.stage.name,
       color: p.stage.color,
     },
+    dayNumber: p.day_number,
   }));
 };

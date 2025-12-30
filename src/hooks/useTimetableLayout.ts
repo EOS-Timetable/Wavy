@@ -31,11 +31,12 @@ export const useTimetableLayout = (performances: PerformanceJoined[]): Timetable
       const startTimeVal = start.getTime();
       const endTimeVal = end.getTime();
 
-      const sH = start.getHours();
+      let sH = start.getHours();
       let eH = end.getHours();
 
       // 새벽 시간 보정 (00~04시 -> 24~28시)
-      if (eH < 5) eH += 24;
+      if (sH < 9) sH += 24;
+      if (eH < 9) eH += 24;
 
       // 그리드 종료 시간 계산 (분이 있으면 올림)
       let gridEndHour = eH;

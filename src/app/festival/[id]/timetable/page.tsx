@@ -22,7 +22,7 @@ export default function TimetablePage() {
   const [festival, setFestival] = useState<any>(null);
   const [stages, setStages] = useState<Stage[]>([]);
   const [dates, setDates] = useState<string[]>([]);
-  const [currentDay, setCurrentDay] = useState<string>("");
+  const [currentDay, setCurrentDay] = useState<number>(1);
   const [performances, setPerformances] = useState<PerformanceJoined[]>([]);
   
   // ID 타입 변경: number -> string
@@ -32,35 +32,46 @@ export default function TimetablePage() {
   // 1. 초기 데이터 로드 (페스티벌 정보, 날짜, 스테이지)
   useEffect(() => {
     async function initData() {
+      if (!festivalId) return;
       setLoading(true);
-      const fetchedFestival = await getFestival(festivalId);
-      const fetchedStages = await getStages(festivalId);
-      const fetchedDates = await getFestivalDates(festivalId);
+
+      // 병렬로 데이터 가져오기 (속도 최적화)
+      const [fetchedFestival, fetchedStages, fetchedDates] = await Promise.all([
+        getFestival(festivalId),
+        getStages(festivalId),
+        getFestivalDates(festivalId),
+      ]);
 
       setFestival(fetchedFestival);
       setStages(fetchedStages);
       setDates(fetchedDates);
       
-      // 날짜가 있으면 첫 번째 날짜 자동 선택
-      if (fetchedDates.length > 0) {
-        setCurrentDay(fetchedDates[0]);
-      }
+      // ✅ [수정] 날짜 문자열을 넣는 게 아니라, 그냥 무조건 1일차(1)로 시작합니다.
+      // 만약 오늘 날짜에 맞춰 자동으로 탭을 띄우고 싶다면 추가 로직이 필요하지만,
+      // 지금은 기본 1일차로 두는 게 안전합니다.
+      setCurrentDay(1);
+
       setLoading(false);
     }
 
-    if (festivalId) initData();
+    initData();
   }, [festivalId]);
 
   // 2. 날짜가 변경될 때마다 해당 날짜의 공연 데이터 로드
   useEffect(() => {
     async function loadPerformances() {
-      if (!festivalId || !currentDay) return;
+      if (!festivalId) return;
+      // 로딩 상태를 여기서 true로 주면 탭 전환 시 깜빡일 수 있으므로 선택적으로 사용
+      // setLoading(true); 
       
+      // ✅ [수정] getPerformancesByDay에 숫자(1, 2)를 넘깁니다.
       const data = await getPerformancesByDay(festivalId, currentDay);
-      setPerformances(data);
+      setPerformances(data || []);
+      
+      // setLoading(false);
     }
     loadPerformances();
-  }, [festivalId, currentDay]);
+  }, [festivalId, currentDay]); // currentDay(숫자)가 바뀌면 실행됨
 
   // --- 핸들러 ---
   const handleToggle = (id: string) => {
