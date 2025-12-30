@@ -6,8 +6,8 @@ import PerformanceCard from './PerformanceCard';
 interface Props {
   stages: Stage[];
   performances: PerformanceJoined[];
-  selectedIds: Set<number>;
-  onToggleId: (id: number) => void;
+  selectedIds: Set<string>;
+  onToggleId: (id: string) => void;
   startHour: number; // 추가됨
   endHour: number;   // 추가됨
 }

@@ -34,3 +34,80 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+```
+wavy-web
+├─ components.json
+├─ eslint.config.mjs
+├─ next.config.ts
+├─ package-lock.json
+├─ package.json
+├─ postcss.config.mjs
+├─ public
+│  ├─ file.svg
+│  ├─ globe.svg
+│  ├─ next.svg
+│  ├─ vercel.svg
+│  └─ window.svg
+├─ README.md
+├─ src
+│  ├─ app
+│  │  ├─ current
+│  │  │  └─ page.tsx
+│  │  ├─ favicon.ico
+│  │  ├─ festival
+│  │  │  └─ [id]
+│  │  │     └─ timetable
+│  │  │        └─ page.tsx
+│  │  ├─ globals.css
+│  │  ├─ layout.tsx
+│  │  ├─ lookup
+│  │  │  └─ page.tsx
+│  │  ├─ main
+│  │  │  └─ page.tsx
+│  │  └─ page.tsx
+│  ├─ components
+│  │  ├─ current
+│  │  │  ├─ action
+│  │  │  │  ├─ ChannelDrawer.tsx
+│  │  │  │  └─ WriteFab.tsx
+│  │  │  ├─ CurrentView.tsx
+│  │  │  ├─ feed
+│  │  │  │  ├─ FeedList.tsx
+│  │  │  │  ├─ FestivalBadge.tsx
+│  │  │  │  ├─ PostCard.tsx
+│  │  │  │  └─ variants
+│  │  │  │     ├─ PostPiece.tsx
+│  │  │  │     ├─ PostRipple.tsx
+│  │  │  │     └─ PostTube.tsx
+│  │  │  └─ layout
+│  │  │     ├─ CurrentHeader.tsx
+│  │  │     └─ SmartFilter.tsx
+│  │  ├─ timetable
+│  │  │  ├─ DaySelector.tsx
+│  │  │  ├─ PerformanceCard.tsx
+│  │  │  ├─ StageBar.tsx
+│  │  │  ├─ TimelineSidebar.tsx
+│  │  │  ├─ TimetableBody.tsx
+│  │  │  ├─ TimetableGrid.tsx
+│  │  │  └─ TimetableHeader.tsx
+│  │  └─ ui
+│  │     ├─ avatar.tsx
+│  │     ├─ badge.tsx
+│  │     ├─ button.tsx
+│  │     ├─ card.tsx
+│  │     ├─ drawer.tsx
+│  │     └─ scroll-area.tsx
+│  ├─ data
+│  │  └─ mock_db.json
+│  ├─ hooks
+│  │  └─ useTimetableLayout.ts
+│  ├─ lib
+│  │  └─ utils.ts
+│  ├─ styles
+│  ├─ types
+│  └─ utils
+│     └─ dataFetcher.ts
+└─ tsconfig.json
+
+```

@@ -93,19 +93,20 @@ async function getPosts(filter: string): Promise<Post[]> {
 // ----------------------------------------------------------------------
 
 interface PageProps {
-  // Next.js 13+ App Router에서 searchParams는 객체로 들어옵니다.
-  searchParams: { [key: string]: string | string[] | undefined };
+  // Next.js 15+ 에서는 searchParams가 Promise입니다!
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
 export default async function CurrentPage({ searchParams }: PageProps) {
-  // 1. 쿼리 스트링 파싱 (기본값 'all')
-  const filter = (searchParams.filter as string) || "all";
+  // 1. await로 값을 먼저 꺼냅니다.
+  const resolvedParams = await searchParams;
+  
+  // 2. 이제 값을 문자열로 변환합니다.
+  const filter = (resolvedParams.filter as string) || "all";
 
-  // 2. 데이터 Fetching (Server Side)
+  // 3. 데이터 Fetching
   const posts = await getPosts(filter);
 
-  // 3. Client Component 렌더링
-  // 데이터를 props로 넘겨줘서 초기 상태를 잡아줍니다 (Hydration)
   return (
     <main className="w-full h-full relative bg-[#0a0e17] text-white">
       <CurrentView initialPosts={posts} activeFilter={filter} />

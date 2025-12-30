@@ -8,8 +8,8 @@ import { useTimetableLayout } from '@/hooks/useTimetableLayout';
 interface TimetableBodyProps {
   stages: Stage[];
   performances: PerformanceJoined[];
-  selectedIds: Set<number>;
-  onToggleId: (id: number) => void;
+  selectedIds: Set<string>;
+  onToggleId: (id: string) => void;
 }
 
 export default function TimetableBody({ stages, performances, selectedIds, onToggleId }: TimetableBodyProps) {

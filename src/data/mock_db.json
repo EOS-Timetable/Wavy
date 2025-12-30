@@ -43,8 +43,8 @@
     { "id": 204, "festivalId": 2, "name": "HIDDEN STAGE", "color": "bg-purple-300 text-black" }
   ],
   "artists": [
-    { "id": 1, "name": "김뜻돌 (Kim Sawol)", "imageUrl": "", "spotifyId": "" },
-    { "id": 2, "name": "리도어 (Lee Door)", "imageUrl": "", "spotifyId": "" },
+    { "id": 1, "name": "김뜻돌 (Meaningful Stone)", "imageUrl": "", "spotifyId": "" },
+    { "id": 2, "name": "리도어 (Redoor)", "imageUrl": "", "spotifyId": "" },
     { "id": 3, "name": "너드커넥션 (Nerd Connection)", "imageUrl": "", "spotifyId": "" },
     { "id": 4, "name": "터치드 (Touched)", "imageUrl": "", "spotifyId": "" },
     { "id": 5, "name": "LITTLE SIMZ", "imageUrl": "", "spotifyId": "" },
