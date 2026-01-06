@@ -8,8 +8,8 @@ interface Props {
   performances: PerformanceJoined[];
   selectedIds: Set<string>;
   onToggleId: (id: string) => void;
-  startHour: number; // 추가됨
-  endHour: number;   // 추가됨
+  startHour: number;
+  endHour: number;
 }
 
 export default function TimetableGrid({ 
@@ -21,29 +21,24 @@ export default function TimetableGrid({
   endHour
 }: Props) {
   
-  const HOUR_HEIGHT = 120; 
-  const PIXELS_PER_MIN = HOUR_HEIGHT / 60;
-  
-  // 전체 높이는 동적으로 계산된 시간 범위에 따름
-  const totalHeight = (endHour - startHour) * HOUR_HEIGHT;
+  // 높이는 CSS 변수(--hour-height)가 제어하므로 JS 상수는 제거하거나 참조용으로만 둡니다.
+  const totalHours = endHour - startHour;
 
   const getPositionStyles = (perf: PerformanceJoined) => {
     const start = new Date(perf.startTime);
     const end = new Date(perf.endTime);
     
-    // [중요] 위치 계산 시 props로 받은 startHour를 기준점으로 사용
-    // 시작 시간의 '시(Hour)'가 자정을 넘겨(0, 1, 2...) startHour보다 작으면 +24 처리
     let sH = start.getHours();
     if (sH < startHour && sH < 5) sH += 24; 
 
-    // (현재 시 - 기준 시) * 60 + 현재 분
-    const startMinutes = ((sH - startHour) * 60) + start.getMinutes();
-    
-    const durationMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
+    // (시작 시간 - 기준 시간)을 시간 단위(소수점 포함)로 환산
+    const startDiffHours = (sH - startHour) + (start.getMinutes() / 60);
+    const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
 
     return {
-      top: `${startMinutes * PIXELS_PER_MIN}px`,
-      height: `${durationMinutes * PIXELS_PER_MIN}px`,
+      // ⚡ [핵심] CSS calc()를 사용하여 브라우저가 높이를 계산하게 함
+      top: `calc(var(--hour-height) * ${startDiffHours})`,
+      height: `calc(var(--hour-height) * ${durationHours})`,
     };
   };
 
@@ -51,8 +46,9 @@ export default function TimetableGrid({
     <div 
       className="relative w-full border-l border-white/5 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px)]"
       style={{ 
-        height: `${totalHeight}px`,
-        backgroundSize: `100% ${HOUR_HEIGHT / 2}px` 
+        height: `calc(var(--hour-height) * ${totalHours})`,
+        // 배경 줄무늬 간격도 CSS 변수 사용 (절반 = 30분)
+        backgroundSize: `100% calc(var(--hour-height) / 2)` 
       }}
     >
       <div className="absolute inset-0 flex w-full h-full">
@@ -60,13 +56,17 @@ export default function TimetableGrid({
           <div 
             key={stage.id} 
             className={`
-              flex-1 min-w-[135px] h-full relative px-0.5 md:px-1
+              flex-1 
+              /* ⚡ [수정] StageBar와 동일하게 반응형 너비 적용 */
+              min-w-[100px] md:min-w-[135px] 
+              
+              h-full relative px-0.5 md:px-1
               ${idx < stages.length - 1 ? 'border-r border-white/5' : ''}
-            `} 
+            `}
           >
             {performances
-              .filter(p => p.stageId === stage.id)
-              .map((perf) => (
+              .filter(p => p.stage.id === stage.id)
+              .map(perf => (
                 <PerformanceCard
                   key={perf.id}
                   data={perf}
@@ -74,7 +74,8 @@ export default function TimetableGrid({
                   onToggle={() => onToggleId(perf.id)}
                   style={getPositionStyles(perf)}
                 />
-              ))}
+              ))
+            }
           </div>
         ))}
       </div>
