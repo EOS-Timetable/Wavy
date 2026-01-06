@@ -8,13 +8,11 @@ interface Props {
 
 export default function DaySelector({ days, currentDay, onSelect }: Props) {
   return (
-    <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2">
+    <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1">
       {days.map((dayDateStr, index) => {
         const dayNum = index + 1;
-        // UI 표시용 라벨 생성 (Day 1, Day 2 ...)
         const label = `Day ${dayNum}`;
 
-        // 필요하다면 날짜도 같이 작게 표시 (옵션)
         const dateObj = new Date(dayDateStr);
         const dateSubLabel = `${dateObj.getMonth() + 1}.${dateObj.getDate()}`; 
 
@@ -25,15 +23,24 @@ export default function DaySelector({ days, currentDay, onSelect }: Props) {
             key={dayDateStr}
             onClick={() => onSelect(dayNum)}
             className={`
-              relative px-6 py-2 rounded-full text-sm font-bold transition-all duration-200 whitespace-nowrap
+              group relative flex items-center gap-1.5 rounded-full border transition-all duration-200 ease-out
+              active:scale-95 whitespace-nowrap
+              
+              /* ⚡ [크기 및 여백 조정] 더 작고 컴팩트하게 */
+              px-3 py-1.5 md:px-4 md:py-1.5 
+              text-xs md:text-sm
+              
               ${isActive 
-                ? 'bg-white text-black shadow-lg scale-105 z-10' 
-                : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-200'}
+                ? 'bg-white border-white text-slate-950 shadow-md font-bold' 
+                : 'bg-slate-900/50 border-white/10 text-gray-400 hover:bg-white/10 hover:border-white/30 hover:text-gray-200'}
             `}
           >
-            <span className="text-base">{label}</span>
-            {/* 날짜 보조 표시 (선택사항) */}
-            <span className={`ml-2 text-xs font-normal ${isActive ? 'text-gray-500' : 'text-gray-600'}`}>
+            {/* Day 라벨 */}
+            <span>{label}</span>
+            
+            {/* 날짜 보조 표시 (구분선 | 추가) */}
+            <span className={`text-[10px] md:text-xs font-normal opacity-80 ${isActive ? 'text-slate-600' : 'text-gray-500 group-hover:text-gray-400'}`}>
+              <span className="mx-0.5 opacity-50">|</span>
               {dateSubLabel}
             </span>
           </button>

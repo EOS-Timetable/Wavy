@@ -13,30 +13,56 @@ export default function TimelineSidebar({ startHour, endHour }: Props) {
 
   return (
     <div className="flex flex-col items-center w-full select-none">
-      {hours.map((hour) => {
+      {hours.map((hour, index) => {
         const displayHour = hour >= 24 ? hour - 24 : hour;
+        
+        // ✅ [수정 포인트 1] 첫 번째 항목인지 확인
+        const isFirst = index === 0;
         
         return (
           <div 
             key={hour} 
-            // ⚡ 높이를 CSS 변수로 지정
             style={{ height: 'var(--hour-height)' }} 
             className="w-full relative border-b border-white/5 last:border-none"
           >
-            {/* 시간 텍스트: 모바일(xs) / 데스크탑(sm) 크기 조정 */}
-            <div className="absolute -top-2.5 w-full text-center z-10">
-              <span className="text-[10px] md:text-sm font-bold text-gray-400 block bg-slate-950 px-1">
+            {/* 1. 정각 (Hour) 표시 */}
+            <div className={`
+              absolute w-full text-center z-10
+              /* ✅ [수정 포인트 2] 첫 번째 시간만 top-0으로 내려서 표시, 나머지는 기존대로 중앙 정렬(-top-...) */
+              ${isFirst ? 'top-0' : '-top-2.5 md:-top-3'}
+            `}>
+              <span className="
+                block bg-slate-950 px-1 font-bold text-gray-200
+                text-xs md:text-lg 
+              ">
                 {displayHour}
               </span>
             </div>
-            
-            {/* 30분 표시 (선택 사항): 데스크탑에서만 보이게 할 수도 있음 */}
-            <div className="hidden md:block absolute top-1/2 -translate-y-1/2 w-full text-center opacity-20">
-              <span className="text-[10px]">-</span>
+
+            {/* 2. 30분 (30) 표시 */}
+            <div className="absolute top-1/2 -translate-y-1/2 w-full text-center">
+              <span className="
+                block bg-slate-950 px-1 font-medium text-gray-600
+                text-[10px] md:text-sm 
+              ">
+                30
+              </span>
             </div>
           </div>
         );
       })}
+
+      {/* 마지막 종료 시간 표시 (기존 유지) */}
+      <div className="w-full relative h-0">
+        <div className="absolute -top-2.5 md:-top-3 w-full text-center z-10">
+          <span className="
+            block bg-slate-950 px-1 font-bold text-gray-200
+            text-xs md:text-lg
+          ">
+            {endHour >= 24 ? endHour - 24 : endHour}
+          </span>
+        </div>
+      </div>
     </div>
   );
 }
