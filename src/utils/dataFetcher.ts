@@ -19,7 +19,7 @@ export interface PerformanceJoined {
   id: string;
   stageId: string;
   startTime: string; // ISO String
-  endTime: string;   // ISO String
+  endTime: string; // ISO String
   artist: Artist;
   stage: Stage;
   dayNumber: number;
@@ -64,7 +64,9 @@ export const getStages = async (festivalId: string): Promise<Stage[]> => {
 };
 
 // 3. 날짜 목록 계산하기
-export const getFestivalDates = async (festivalId: string): Promise<string[]> => {
+export const getFestivalDates = async (
+  festivalId: string
+): Promise<string[]> => {
   const festival = await getFestival(festivalId);
   if (!festival) return [];
 
@@ -87,14 +89,15 @@ export const getPerformancesByDay = async (
   festivalId: string,
   dayNumber: number
 ): Promise<PerformanceJoined[]> => {
-  
   const { data, error } = await supabase
     .from("performances")
-    .select(`
+    .select(
+      `
       *,
       stage:stages ( * ),
       artist:artists ( * )
-    `)
+    `
+    )
     .eq("festival_id", festivalId)
     .eq("day_number", dayNumber) // ✅ 핵심: DB에 적힌 '일차'로만 가져옴 (시간 계산 X)
     .order("start_time");
@@ -123,4 +126,38 @@ export const getPerformancesByDay = async (
     },
     dayNumber: p.day_number,
   }));
+};
+
+// 5. 페스티벌의 모든 아티스트 라인업 가져오기 (중복 제거)
+export const getFestivalArtists = async (
+  festivalId: string
+): Promise<Artist[]> => {
+  const { data, error } = await supabase
+    .from("performances")
+    .select(
+      `
+      artist:artists ( id, name, image_url )
+    `
+    )
+    .eq("festival_id", festivalId);
+
+  if (error || !data) {
+    console.error("Error fetching artists:", error);
+    return [];
+  }
+
+  // 중복 제거 (같은 아티스트가 여러 날 공연할 수 있음)
+  const uniqueArtists = new Map<string, Artist>();
+
+  data.forEach((p: any) => {
+    if (p.artist && !uniqueArtists.has(p.artist.id)) {
+      uniqueArtists.set(p.artist.id, {
+        id: p.artist.id,
+        name: p.artist.name,
+        imageUrl: p.artist.image_url,
+      });
+    }
+  });
+
+  return Array.from(uniqueArtists.values());
 };

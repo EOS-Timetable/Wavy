@@ -19,21 +19,32 @@ export default function FestivalMap({ lat, lng, placeName }: FestivalMapProps) {
   if (!lat || !lng) return <div className="text-red-500">좌표 오류</div>;
 
   // 3. 로딩 중일 때 보여줄 UI (스켈레톤)
-  if (loading) return <div className="w-full h-[300px] bg-gray-200 animate-pulse rounded-xl" />;
-  
+  if (loading)
+    return (
+      <div className="w-full h-[300px] bg-gray-200 animate-pulse rounded-xl" />
+    );
+
   // 4. 로딩 실패 시 에러 메시지
-  if (error) return <div className="text-red-500">지도 로드 실패: {error.message}</div>;
+  if (error)
+    return <div className="text-red-500">지도 로드 실패: {error.message}</div>;
 
   return (
-    <div className="w-full h-[300px] rounded-xl overflow-hidden border border-white/10 shadow-lg relative z-0">
+    <div className="w-full h-full rounded-xl overflow-hidden border border-white/10 shadow-lg relative z-0">
       <Map
         center={{ lat, lng }}
         style={{ width: "100%", height: "100%" }}
-        level={4}
+        level={3}
       >
         <MapMarker position={{ lat, lng }}>
           {placeName && (
-            <div style={{ padding: "5px", color: "#000", fontSize: "12px", fontWeight: "bold" }}>
+            <div
+              style={{
+                padding: "5px",
+                color: "#000",
+                fontSize: "12px",
+                fontWeight: "bold",
+              }}
+            >
               {placeName}
             </div>
           )}
