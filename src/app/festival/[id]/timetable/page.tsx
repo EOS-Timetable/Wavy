@@ -13,17 +13,12 @@ import {
 
 import TimetableHeader from "@/components/timetable/TimetableHeader";
 import TimetableBody from "@/components/timetable/TimetableBody";
-import TimetableFab from "@/components/timetable/TimetableFab"; // FAB 컴포넌트 import
-
-// Spotify 로직 import
-import { supabase } from "@/lib/supabase";
-import { createPlaylistFromArtists } from "@/lib/spotify";
+import TimetableFab from "@/components/timetable/TimetableFab";
+import SpotifyEmbed from "@/components/SpotifyEmbed";
 import { Loader2 } from "lucide-react";
 
 export default function TimetablePage() {
   const params = useParams();
-  const router = useRouter();
-  const searchParams = useSearchParams();
   const festivalId = params.id as string;
 
   // --- State 관리 ---
@@ -34,8 +29,9 @@ export default function TimetablePage() {
   const [performances, setPerformances] = useState<PerformanceJoined[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
-
-  // [추가] 플레이리스트 생성 로딩 상태
+  
+  // 플레이리스트 관련 State
+  const [createdPlaylistId, setCreatedPlaylistId] = useState<string | null>(null);
   const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false);
 
   // 1. 초기 데이터 로드
@@ -53,11 +49,10 @@ export default function TimetablePage() {
       setFestival(fetchedFestival);
       setStages(fetchedStages);
       setDates(fetchedDates);
-      setCurrentDay(1); // 기본 1일차
+      setCurrentDay(1);
 
       setLoading(false);
     }
-
     initData();
   }, [festivalId]);
 
@@ -71,92 +66,6 @@ export default function TimetablePage() {
     loadPerformances();
   }, [festivalId, currentDay]);
 
-  // 3. [핵심] 로그인 후 돌아왔을 때 작업 이어하기
-  useEffect(() => {
-    const resumePlaylistCreation = async () => {
-      // 1. 저장된 작업이 있는지 확인
-      const pendingArtists = localStorage.getItem("wavy_pending_artists");
-      const pendingDay = localStorage.getItem("wavy_pending_day");
-
-      if (!pendingArtists) return;
-
-      setIsCreatingPlaylist(true);
-
-      try {
-        // 2. 세션 확인
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session && session.provider_token) {
-          // 3. 토큰이 유효하면 바로 생성 로직 실행
-          const artistNames = JSON.parse(pendingArtists);
-          const day = pendingDay ? parseInt(pendingDay) : 1;
-
-          await processPlaylistCreation(artistNames, session.provider_token, day);
-          
-          // 4. 성공 후 임시 데이터 삭제
-          localStorage.removeItem("wavy_pending_artists");
-          localStorage.removeItem("wavy_pending_day");
-        }
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setIsCreatingPlaylist(false);
-      }
-    };
-
-    resumePlaylistCreation();
-  }, []); // 마운트 시 1회 실행
-
-  // 4. 에러 체크 (로그인 실패 후 돌아왔을 때)
-  useEffect(() => {
-    const error = searchParams.get("error");
-    const errorDesc = searchParams.get("error_description");
-
-    if (error) {
-      // URL 지저분하니까 정리
-      window.history.replaceState(null, "", window.location.pathname);
-      
-      // 사용자에게 알림
-      if (error === "access_denied") {
-        alert(`로그인 실패: 스포티파이 이메일 인증이 필요하거나, 개발자 대시보드에 등록되지 않은 유저입니다.\n(${errorDesc})`);
-      } else {
-        alert(`로그인 오류: ${errorDesc}`);
-      }
-      
-      // 로딩 상태 해제 (만약 걸려있다면)
-      setIsCreatingPlaylist(false);
-      localStorage.removeItem("wavy_pending_artists"); // 펜딩 작업 취소
-    }
-  }, [searchParams]);
-
-  // --- 내부 로직 분리 (재사용을 위해) ---
-  const processPlaylistCreation = async (artistNames: string[], token: string, day: number) => {
-    try {
-      // 사용자 ID 조회
-      const meRes = await fetch('https://api.spotify.com/v1/me', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!meRes.ok) throw new Error("Spotify 사용자 정보를 가져오지 못했습니다.");
-      const me = await meRes.json();
-
-      alert(`🎵 '${festival?.name}' Day ${day} 플레이리스트 생성을 시작합니다.`);
-
-        // [체크 포인트] festivalName을 정확히 넘겨주고 있는지 확인
-      await createPlaylistFromArtists({
-        artistNames,
-        token,
-        userId: me.id,
-        festivalName: festival?.name,
-        day: day
-      });
-
-      alert(`✨ 성공! '[${festival?.name}] Day ${day}' 플레이리스트가 생성되었습니다.`);
-    } catch (error: any) {
-      console.error("Playlist Logic Error:", error);
-      alert(`생성 실패: ${error.message}`);
-    }
-  };
-
   // --- 핸들러 ---
   const handleToggle = (id: string) => {
     const newSet = new Set(selectedIds);
@@ -165,62 +74,51 @@ export default function TimetablePage() {
     setSelectedIds(newSet);
   };
 
-  // FAB 핸들러 1: 배경화면 만들기 (준비중)
   const handleMakeWallpaper = () => {
     alert("🎨 배경화면 만들기 기능은 준비 중입니다!");
   };
 
-  // FAB 핸들러 2: 예습 플리 만들기 (인증 시작)
+  // [변경] 서버 API를 호출하여 플레이리스트 생성 (로그인 불필요)
   const handleMakePlaylist = async () => {
     if (selectedIds.size === 0) {
       alert("공연을 먼저 선택해주세요!");
       return;
     }
 
-    // A. 아티스트 목록 추출
     const selectedPerformances = performances.filter(p => selectedIds.has(p.id));
     if (selectedPerformances.length === 0) {
-        alert("현재 화면에 보이는 공연 중에서 선택된 것이 없습니다.\n(다른 날짜의 공연은 현재 포함되지 않습니다)");
-        return;
+      alert("선택된 공연이 없습니다.");
+      return;
     }
 
-    // 시간순 정렬 및 이름 추출
+    // 시간순 정렬
     selectedPerformances.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
     const artistNames = selectedPerformances.map(p => p.artist.name);
     
-    // B. 생성 시작 (로딩 표시)
     setIsCreatingPlaylist(true);
 
     try {
-      // 1. 현재 로그인 상태 확인
-      const { data: { session } } = await supabase.auth.getSession();
+      // 서버 API 호출
+      const res = await fetch('/api/create-playlist', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          artistNames,
+          festivalName: festival.name,
+          day: currentDay
+        }),
+      });
 
-      // 2-A. 로그인이 안 되어 있거나 토큰이 없으면 -> 저장 후 로그인 페이지로
-      if (!session || !session.provider_token) {
-        const confirmLogin = confirm("Spotify 로그인이 필요합니다. 이동하시겠습니까?");
-        if (!confirmLogin) {
-          setIsCreatingPlaylist(false);
-          return;
-        }
+      const data = await res.json();
 
-        // ★ 중요: 현재 작업 내용을 저장해둠 (돌아와서 쓰려고)
-        localStorage.setItem("wavy_pending_artists", JSON.stringify(artistNames));
-        localStorage.setItem("wavy_pending_day", currentDay.toString());
-
-        const { error } = await supabase.auth.signInWithOAuth({
-          provider: 'spotify',
-          options: {
-            scopes: 'user-read-private playlist-modify-public playlist-modify-private',
-            redirectTo: window.location.href,
-          },
-        });
-        if (error) throw error;
-        // 여기서 리다이렉트 되므로 이후 코드는 실행 안 됨
-        return; 
+      if (!res.ok) {
+        throw new Error(data.error || '플레이리스트 생성 실패');
       }
 
-      // 2-B. 이미 로그인이 되어 있으면 -> 바로 생성
-      await processPlaylistCreation(artistNames, session.provider_token, currentDay);
+      setCreatedPlaylistId(data.playlistId);
+      alert("✨ 플레이리스트가 생성되었습니다! 아래 플레이어에서 바로 들어보세요.");
 
     } catch (error: any) {
       console.error("Error:", error);
@@ -269,19 +167,49 @@ export default function TimetablePage() {
         />
       </div>
 
+      {/* 임베드 플레이어 (생성 성공 시 표시) */}
+      {createdPlaylistId && (
+         <div className="fixed bottom-20 left-4 right-4 z-50 animate-in slide-in-from-bottom-5 fade-in duration-300">
+           <div className="bg-slate-900/95 backdrop-blur-sm p-2 rounded-xl border border-slate-700 relative shadow-2xl">
+             <button 
+               onClick={() => setCreatedPlaylistId(null)}
+               className="absolute -top-3 -right-3 bg-slate-700 hover:bg-slate-600 text-white rounded-full p-1.5 shadow-md transition-colors"
+               aria-label="Close player"
+             >
+               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+             </button>
+             
+             <h3 className="text-center text-xs text-gray-400 mb-2 font-medium">
+               🎵 방금 생성된 라인업 미리듣기
+             </h3>
+             
+             <SpotifyEmbed type="playlist" id={createdPlaylistId} height={152} />
+             
+             <div className="text-center mt-2">
+                <p className="text-[10px] text-gray-500">
+                  우측 상단 로고를 누르면 앱에서 저장할 수 있습니다
+                </p>
+             </div>
+           </div>
+         </div>
+       )}
+
       {/* FAB 버튼 */}
       <TimetableFab 
         onMakeWallpaper={handleMakeWallpaper}
         onMakePlaylist={handleMakePlaylist}
-        //isLoading={isCreatingPlaylist} // (선택) FAB 컴포넌트에 로딩 prop 추가 시
+        // isLoading={isCreatingPlaylist}
       />
 
-      {/* 로딩 오버레이 (간단 버전) */}
+      {/* 로딩 오버레이 */}
       {isCreatingPlaylist && (
-        <div className="absolute inset-0 bg-black/50 z-[100] flex items-center justify-center">
-            <div className="bg-slate-800 p-4 rounded-lg flex items-center gap-3 shadow-xl">
-                <Loader2 className="w-6 h-6 animate-spin text-green-500" />
-                <span>Spotify 플레이리스트 생성 중...</span>
+        <div className="absolute inset-0 bg-black/60 z-[100] flex flex-col items-center justify-center backdrop-blur-sm">
+            <div className="bg-slate-800 p-6 rounded-2xl flex flex-col items-center gap-4 shadow-2xl border border-slate-700">
+                <Loader2 className="w-8 h-8 animate-spin text-green-500" />
+                <div className="text-center">
+                  <p className="font-bold text-lg">Spotify 플레이리스트 생성 중...</p>
+                  <p className="text-sm text-gray-400 mt-1">잠시만 기다려주세요 (약 5~10초)</p>
+                </div>
             </div>
         </div>
       )}
