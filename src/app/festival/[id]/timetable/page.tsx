@@ -173,30 +173,54 @@ export default function TimetablePage() {
 
       {/* 임베드 플레이어 (생성 성공 시 표시) */}
       {createdPlaylistId && (
-         <div className="fixed bottom-20 left-4 right-4 z-50 animate-in slide-in-from-bottom-5 fade-in duration-300">
-           <div className="bg-slate-900/95 backdrop-blur-sm p-2 rounded-xl border border-slate-700 relative shadow-2xl">
-             <button 
-               onClick={() => setCreatedPlaylistId(null)}
-               className="absolute -top-3 -right-3 bg-slate-700 hover:bg-slate-600 text-white rounded-full p-1.5 shadow-md transition-colors"
-               aria-label="Close player"
-             >
-               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-             </button>
-             
-             <h3 className="text-center text-xs text-gray-400 mb-2 font-medium">
-               🎵 방금 생성된 라인업 미리듣기
-             </h3>
-             
-             <SpotifyEmbed type="playlist" id={createdPlaylistId} height={152} />
-             
-             <div className="text-center mt-2">
-                <p className="text-[10px] text-gray-500">
-                  우측 상단 로고를 누르면 앱에서 저장할 수 있습니다
-                </p>
-             </div>
-           </div>
-         </div>
-       )}
+        // 1. 위치 잡기 (화면 하단 고정)
+        <div className="fixed bottom-24 left-4 right-4 z-50 flex justify-center animate-in slide-in-from-bottom-5 fade-in duration-300">
+          
+          {/* 2. 반응형 컨테이너 (여기가 핵심!) */}
+          <div className="
+            relative w-full 
+            max-w-[500px]           /* PC에서도 너무 안 커지게 제한 */
+            bg-[#121212] 
+            rounded-2xl 
+            border border-white/10 
+            shadow-2xl 
+            p-1                     /* 내부 패딩을 아주 얇게 줌 */
+          ">
+            
+            {/* 닫기 버튼 */}
+            <button 
+              onClick={() => setCreatedPlaylistId(null)}
+              className="absolute -top-3 -right-3 bg-neutral-800 text-white rounded-full p-2 shadow-lg border border-neutral-600 z-30 hover:bg-neutral-700 transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
+
+            {/* 3. 높이 조절 (모바일 vs PC) */}
+            <div className="
+              w-full 
+              h-[152px]       /* 기본(모바일): 중간 크기 */
+              md:h-[352px]    /* 태블릿/PC(768px 이상): 목록형 크기 */
+              transition-all duration-300 ease-in-out /* 크기 변할 때 부드럽게 */
+            ">
+              {/* 컴포넌트에 rounded-xl을 직접 줘서 iframe 모서리를 깎음 */}
+              <SpotifyEmbed 
+                type="playlist" 
+                id={createdPlaylistId} 
+                className="rounded-xl"
+              />
+            </div>
+
+            {/* 하단 안내 문구 (모바일 공간 부족 시 숨김 가능) */}
+            <div className="text-center py-2 px-4">
+              <p className="text-[11px] text-gray-400 truncate">
+                우측 상단 로고를 눌러 저장하세요
+                <span className="hidden md:inline"> · PC에서는 목록 스크롤이 가능합니다</span>
+              </p>
+            </div>
+
+          </div>
+        </div>
+      )}
 
       {/* FAB 버튼 */}
       <TimetableFab 
