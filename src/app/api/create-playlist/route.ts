@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 const CLIENT_ID = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
 const CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET; // .env.local에 추가 필요
-const REFRESH_TOKEN = process.env.NEXT_SPOTIFY_ADMIN_REFRESH_TOKEN;
+const REFRESH_TOKEN = process.env.SPOTIFY_ADMIN_REFRESH_TOKEN;
 
 // Spotify API 호출 헬퍼
 const fetchSpotify = async (url: string, token: string, options: RequestInit = {}) => {
@@ -49,9 +49,19 @@ const getAccessToken = async () => {
 export async function POST(request: Request) {
   try {
     const { artistNames, festivalName, day } = await request.json();
+    
+    // ★ 디버깅용 로그: Vercel 로그창에 범인이 누군지 뜹니다.
+    console.log("--- [DEBUG] Environment Variables Check ---");
+    console.log("1. CLIENT_ID:", CLIENT_ID ? "✅ OK" : "❌ Missing");
+    console.log("2. CLIENT_SECRET:", CLIENT_SECRET ? "✅ OK" : "❌ Missing");
+    // 보안상 토큰 값 전체를 찍지는 말고 앞 5글자만 찍어서 확인
+    console.log("3. REFRESH_TOKEN:", REFRESH_TOKEN ? `✅ OK (${REFRESH_TOKEN.substring(0, 5)}...)` : "❌ Missing");
+    console.log("-------------------------------------------");
 
     if (!REFRESH_TOKEN || !CLIENT_SECRET) {
-      return NextResponse.json({ error: 'Server misconfiguration' }, { status: 500 });
+      // 여기서 멈췄던 겁니다.
+      console.error("Critical Error: Missing Environment Variables");
+      return NextResponse.json({ error: 'Server misconfiguration: Missing Tokens' }, { status: 500 });
     }
 
     // 1. 토큰 발급
