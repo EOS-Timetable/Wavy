@@ -116,7 +116,11 @@ export default function TimetablePage() {
       if (!res.ok) {
         throw new Error(data.error || '플레이리스트 생성 실패');
       }
-
+      
+      // [추가] 스포티파이 서버가 정신 차릴 때까지 1.5초 대기
+      // 사용자에게는 "마무리 중..." 같은 느낌을 줍니다.
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      
       setCreatedPlaylistId(data.playlistId);
       alert("✨ 플레이리스트가 생성되었습니다! 아래 플레이어에서 바로 들어보세요.");
 
