@@ -713,7 +713,7 @@ export default function MyTimetablePage() {
             href="/" // 메인(축제 선택 등)으로 이동 가정
             className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold py-3 px-6 rounded-xl transition-all"
             >
-            홈으로 가기
+            <span>홈으로 가기</span>
             </Link>
         </div>
         )}
