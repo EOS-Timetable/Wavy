@@ -709,11 +709,14 @@ export default function MyTimetablePage() {
             </p>
             
             {/* 메인으로 돌아가는 버튼이나, 새 시간표 만들기 버튼 등 연결 */}
-            <Link 
-                href="/" 
-                className="bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-bold py-3 px-6 rounded-xl transition-all shadow-lg shadow-cyan-500/20"
+            <Link
+                href="/home"
+                className="group relative inline-flex items-center gap-3 px-10 py-4 md:px-12 md:py-5 rounded-full bg-[#7000ff]/20 border border-white/20 backdrop-blur-md overflow-hidden transition-all duration-300 hover:bg-[#7000ff]/40 hover:border-white/50 hover:scale-105 hover:shadow-[0_0_40px_rgba(112,0,255,0.5)]"
             >
+                <span className="relative z-10 font-bold text-base md:text-lg tracking-wide text-white">
                 홈으로 가기
+                </span>
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
             </Link>
         </div>
         )}
