@@ -1,246 +1,231 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
-import {
-  getFestival,
-  getStages,
-  getFestivalDates,
-  getPerformancesByDay,
-  Stage,
-  PerformanceJoined,
-} from "@/utils/dataFetcher";
+import React, { useRef, useState } from "react";
+import { useParams, useRouter } from "next/navigation"; // ⚡ useRouter 추가
+import TimetableTemplate from "@/components/timetable/TimetableTemplate";
+import { Save, Loader2, X, ArrowRight, CheckCircle } from "lucide-react"; // ⚡ 아이콘 추가
 
-import TimetableHeader from "@/components/timetable/TimetableHeader";
-import TimetableBody from "@/components/timetable/TimetableBody";
-import TimetableFab from "@/components/timetable/TimetableFab";
-import SpotifyEmbed from "@/components/SpotifyEmbed";
-import { Loader2 } from "lucide-react";
+// API 및 유틸리티
+import { getFestival } from "@/utils/dataFetcher";
+import { getMyTimetables, saveMyTimetable } from "@/utils/myTimetableFetcher";
+import { useDeviceId } from "@/hooks/useDeviceId";
 
-export default function TimetablePage() {
+export default function FestivalTimetablePage() {
+  const router = useRouter(); // ⚡ 페이지 이동을 위한 훅
   const params = useParams();
   const festivalId = params.id as string;
-
-  // --- State 관리 ---
-  const [festival, setFestival] = useState<any>(null);
-  const [stages, setStages] = useState<Stage[]>([]);
-  const [dates, setDates] = useState<string[]>([]);
-  const [currentDay, setCurrentDay] = useState<number>(1);
-  const [performances, setPerformances] = useState<PerformanceJoined[]>([]);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState(true);
+  const deviceId = useDeviceId();
   
-  // 플레이리스트 관련 State
-  const [createdPlaylistId, setCreatedPlaylistId] = useState<string | null>(null);
-  const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false);
+  // 상태 관리
+  const [isSaving, setIsSaving] = useState(false);
+  const [showSaveModal, setShowSaveModal] = useState(false); // 이름 입력 모달
+  const [planTitle, setPlanTitle] = useState(""); 
+  const [showSuccessModal, setShowSuccessModal] = useState(false); // 성공 확인 모달
+  const [existingTitles, setExistingTitles] = useState<Set<string>>(new Set());
 
-  // 1. 초기 데이터 로드
-  useEffect(() => {
-    async function initData() {
-      if (!festivalId) return;
-      setLoading(true);
+  const selectedIdsRef = useRef<Set<string>>(new Set());
 
-      const [fetchedFestival, fetchedStages, fetchedDates] = await Promise.all([
-        getFestival(festivalId),
-        getStages(festivalId),
-        getFestivalDates(festivalId),
-      ]);
-
-      setFestival(fetchedFestival);
-      setStages(fetchedStages);
-      setDates(fetchedDates);
-      setCurrentDay(1);
-
-      setLoading(false);
-    }
-    initData();
-  }, [festivalId]);
-
-  // 2. 공연 데이터 로드
-  useEffect(() => {
-    async function loadPerformances() {
-      if (!festivalId) return;
-      const data = await getPerformancesByDay(festivalId, currentDay);
-      setPerformances(data || []);
-    }
-    loadPerformances();
-  }, [festivalId, currentDay]);
-
-  // --- 핸들러 ---
-  const handleToggle = (id: string) => {
-    const newSet = new Set(selectedIds);
-    if (newSet.has(id)) newSet.delete(id);
-    else newSet.add(id);
-    setSelectedIds(newSet);
+  // 선택 변경 핸들러
+  const handleSelectionChange = (ids: Set<string>) => {
+    selectedIdsRef.current = ids;
   };
 
-  const handleMakeWallpaper = () => {
-    alert("🎨 배경화면 만들기 기능은 준비 중입니다!");
-  };
+  // 1. [저장하기] 버튼 클릭 시 -> 이름 입력 모달 열기
+  const handleOpenSaveModal = async () => {
+    if (!deviceId) return;
 
-  // [변경] 서버 API를 호출하여 플레이리스트 생성 (로그인 불필요)
-  const handleMakePlaylist = async () => {
-    if (selectedIds.size === 0) {
-      alert("공연을 먼저 선택해주세요!");
+    const currentSelected = Array.from(selectedIdsRef.current);
+    if (currentSelected.length === 0) {
+      alert("저장할 공연을 하나 이상 선택해주세요!");
       return;
     }
-
-    const selectedPerformances = performances.filter(p => selectedIds.has(p.id));
-    if (selectedPerformances.length === 0) {
-      alert("선택된 공연이 없습니다.");
-      return;
-    }
-
-    // 시간순 정렬
-    selectedPerformances.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
-    const artistNames = selectedPerformances.map(p => p.artist.name);
     
-    setIsCreatingPlaylist(true);
+    setPlanTitle(""); 
+    setShowSaveModal(true); 
+    // 모달 열릴 때 내 타임테이블 목록을 가져와서 이름만 추출해둠
+    try {
+      const myLists = await getMyTimetables(deviceId);
+      
+      // festivalId와 일치하는 항목만 필터링하여 Set 생성
+      const titles = new Set(
+        myLists
+          .filter((item: any) => item.festival_id === festivalId) // 같은 페스티벌인지 확인
+          .map((item: any) => item.title)
+      );
+      
+      setExistingTitles(titles);
+    } catch (e) {
+      console.error("기존 목록 로드 실패", e);
+    }
+  };
+
+  // 2. 이름 입력 후 [확인] 클릭 시 -> 실제 DB 저장
+  const handleConfirmSave = async () => {
+    if (!deviceId) return;
+
+    if (!planTitle.trim()) {
+      alert("플랜 이름을 입력해주세요 (예: Plan A, 토요일 공격형)");
+      return;
+    }
+
+    setIsSaving(true);
 
     try {
-      // 서버 API 호출
-      const res = await fetch('/api/create-playlist', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          artistNames,
-          festivalName: festival.name,
-          day: currentDay
-        }),
-      });
+      const festivalInfo = await getFestival(festivalId);
+      const festivalName = festivalInfo ? festivalInfo.name : "Unknown Festival";
+      const currentSelected = Array.from(selectedIdsRef.current);
 
-      const data = await res.json();
+      const { error } = await saveMyTimetable(
+        festivalId,
+        festivalName,
+        planTitle,
+        deviceId,
+        currentSelected
+      );
 
-      if (!res.ok) {
-        throw new Error(data.error || '플레이리스트 생성 실패');
-      }
+      if (error) throw error;
       
-      // [추가] 스포티파이 서버가 정신 차릴 때까지 1.5초 대기
-      // 사용자에게는 "마무리 중..." 같은 느낌을 줍니다.
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      // ✅ 성공 처리 변경: alert 제거 -> 모달 스위칭
+      setShowSaveModal(false);     // 입력창 닫기
+      setShowSuccessModal(true);   // 성공 모달 열기!
       
-      setCreatedPlaylistId(data.playlistId);
-      alert("✨ 플레이리스트가 생성되었습니다! 아래 플레이어에서 바로 들어보세요.");
-
-    } catch (error: any) {
-      console.error("Error:", error);
-      alert(`오류 발생: ${error.message}`);
+    } catch (e) {
+      console.error("Save failed:", e);
+      alert("저장 중 오류가 발생했습니다.");
     } finally {
-      setIsCreatingPlaylist(false);
+      setIsSaving(false);
     }
   };
 
-  // --- 렌더링 ---
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-      </div>
-    );
-  }
-
-  if (!festival) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">
-        Festival info not found.
-      </div>
-    );
-  }
+  // 3. ⚡ [보러 가기] 핸들러
+  const handleGoToMyList = () => {
+    router.push('/timetable'); // 내 타임테이블 목록 페이지로 이동
+  };
 
   return (
-    <div className="h-screen w-screen bg-slate-950 text-white flex flex-col overflow-hidden relative">
-      {/* 헤더 */}
-      <div className="flex-shrink-0 z-50">
-        <TimetableHeader
-          title={festival.name}
-          days={dates}
-          currentDay={currentDay}
-          onSelectDay={setCurrentDay}
-        />
-      </div>
+    <>
+      {/* 메인 타임테이블 화면 */}
+      <TimetableTemplate
+        festivalId={festivalId}
+        onSelectionChange={handleSelectionChange}
+        headerAction={
+          <button 
+            onClick={handleOpenSaveModal} 
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 md:px-4 md:py-2 rounded-full text-xs md:text-sm font-bold shadow-lg transition-all active:scale-95"
+          >
+            <Save size={16} />
+            <span className="hidden md:inline">저장하기</span>
+          </button>
+        }
+      />
 
-      {/* 바디 */}
-      <div className="flex-1 relative overflow-hidden">
-        <TimetableBody
-          stages={stages}
-          performances={performances}
-          selectedIds={selectedIds}
-          onToggleId={handleToggle}
-        />
-      </div>
+      {/* --- 모달 1: 이름 입력창 --- */}
+      {showSaveModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-white/10 w-full max-w-sm rounded-2xl p-6 shadow-2xl relative">
+            <button onClick={() => setShowSaveModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"><X size={20} /></button>
 
-      {/* 임베드 플레이어 (생성 성공 시 표시) */}
-      {createdPlaylistId && (
-        // 1. 위치 잡기 (화면 하단 고정)
-        <div className="fixed bottom-24 left-4 right-4 z-50 flex justify-center animate-in slide-in-from-bottom-5 fade-in duration-300">
-          
-          {/* 2. 반응형 컨테이너 (여기가 핵심!) */}
-          <div className="
-            relative w-full 
-            max-w-[500px]           /* PC에서도 너무 안 커지게 제한 */
-            bg-[#121212] 
-            rounded-2xl 
-            border border-white/10 
-            shadow-2xl 
-            p-1                     /* 내부 패딩을 아주 얇게 줌 */
-          ">
+            <h3 className="text-xl font-bold text-white mb-2">타임테이블 저장</h3>
+            <p className="text-gray-400 text-sm mb-5">나만의 라인업에 이름을 붙여주세요.</p>
+
+            {/* ⚡ [로직 추가] 실시간 검사 */}
+            {(() => {
+              const isDuplicate = existingTitles.has(planTitle); // 이미 있는 이름인가?
+              const isEmpty = !planTitle.trim();
+              
+              return (
+                <>
+                  <input
+                    type="text"
+                    value={planTitle}
+                    onChange={(e) => setPlanTitle(e.target.value)}
+                    placeholder="이름을 입력하세요"
+                    autoFocus
+                    className={`
+                      w-full bg-slate-800 border text-white rounded-xl px-4 py-3 mb-1 focus:outline-none font-bold text-lg transition-all
+                      /* ⚡ 빨간 테두리 적용 */
+                      ${isDuplicate 
+                        ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500' 
+                        : 'border-slate-700 focus:border-blue-500'
+                      }
+                    `}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !isDuplicate && !isEmpty) handleConfirmSave();
+                    }}
+                  />
+                  
+                  {/* ⚡ 에러 메시지 */}
+                  <div className="h-6 mb-2 text-xs">
+                    {isDuplicate && <span className="text-red-400 font-medium">⚠️ 이미 사용 중인 이름입니다.</span>}
+                  </div>
+
+                  <button
+                    onClick={handleConfirmSave}
+                    disabled={isSaving || isDuplicate || isEmpty}
+                    className={`
+                      w-full font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2
+                      /* ⚡ 버튼 비활성화 스타일 */
+                      ${(isSaving || isDuplicate || isEmpty)
+                        ? 'bg-slate-800 text-gray-500 cursor-not-allowed'
+                        : 'bg-blue-600 hover:bg-blue-500 text-white'
+                      }
+                    `}
+                  >
+                    {isSaving ? <Loader2 className="animate-spin" /> : "저장 완료"}
+                  </button>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* --- ⚡ 모달 2: 저장 성공 확인 (여기 추가됨!) --- */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-300">
+          <div className="bg-slate-900 border border-white/10 w-full max-w-sm rounded-2xl p-6 shadow-2xl relative flex flex-col items-center text-center">
             
-            {/* 닫기 버튼 */}
+            {/* 닫기 버튼 (더 둘러보기와 동일 역할) */}
             <button 
-              onClick={() => setCreatedPlaylistId(null)}
-              className="absolute -top-3 -right-3 bg-neutral-800 text-white rounded-full p-2 shadow-lg border border-neutral-600 z-30 hover:bg-neutral-700 transition-colors"
+              onClick={() => setShowSuccessModal(false)} 
+              className="absolute top-4 right-4 text-gray-400 hover:text-white"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              <X size={20} />
             </button>
-
-            {/* 3. 높이 조절 (모바일 vs PC) */}
-            <div className="
-              w-full 
-              h-[152px]       /* 기본(모바일): 중간 크기 */
-              md:h-[352px]    /* 태블릿/PC(768px 이상): 목록형 크기 */
-              transition-all duration-300 ease-in-out /* 크기 변할 때 부드럽게 */
-            ">
-              {/* 컴포넌트에 rounded-xl을 직접 줘서 iframe 모서리를 깎음 */}
-              <SpotifyEmbed 
-                type="playlist" 
-                id={createdPlaylistId} 
-                className="rounded-xl"
-              />
+            
+            {/* 아이콘 + 메시지 */}
+            <div className="w-16 h-16 bg-green-500/20 text-green-400 rounded-full flex items-center justify-center mb-4 ring-1 ring-green-500/50 shadow-[0_0_20px_rgba(34,197,94,0.3)] animate-in zoom-in duration-300">
+              <CheckCircle size={32} strokeWidth={3} />
             </div>
+            
+            <h3 className="text-xl font-bold text-white mb-2">저장 완료!</h3>
+            <p className="text-gray-400 text-sm mb-6">
+              <strong className="text-blue-400">{planTitle}</strong>이(가) 저장되었습니다.<br/>
+              지금 바로 확인하시겠습니까?
+            </p>
 
-            {/* 하단 안내 문구 (모바일 공간 부족 시 숨김 가능) */}
-            <div className="text-center py-2 px-4">
-              <p className="text-[11px] text-gray-400 truncate">
-                우측 상단 로고를 눌러 저장하세요
-                <span className="hidden md:inline"> · PC에서는 목록 스크롤이 가능합니다</span>
-              </p>
+            {/* 버튼 그룹 */}
+            <div className="flex gap-3 w-full">
+              {/* 1. 더 둘러보기 (현재 페이지 유지) */}
+              <button 
+                onClick={() => setShowSuccessModal(false)}
+                className="flex-1 py-3 rounded-xl bg-slate-800 text-gray-300 font-bold hover:bg-slate-700 hover:text-white transition-colors border border-slate-700"
+              >
+                더 둘러보기
+              </button>
+
+              {/* 2. 보러 가기 (내 목록으로 이동) */}
+              <button 
+                onClick={handleGoToMyList}
+                className="flex-[1.5] py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-500 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20"
+              >
+                보러 가기 <ArrowRight size={18} />
+              </button>
             </div>
 
           </div>
         </div>
       )}
-
-      {/* FAB 버튼 */}
-      <TimetableFab 
-        onMakeWallpaper={handleMakeWallpaper}
-        onMakePlaylist={handleMakePlaylist}
-        // isLoading={isCreatingPlaylist}
-      />
-
-      {/* 로딩 오버레이 */}
-      {isCreatingPlaylist && (
-        <div className="absolute inset-0 bg-black/60 z-[100] flex flex-col items-center justify-center backdrop-blur-sm">
-            <div className="bg-slate-800 p-6 rounded-2xl flex flex-col items-center gap-4 shadow-2xl border border-slate-700">
-                <Loader2 className="w-8 h-8 animate-spin text-green-500" />
-                <div className="text-center">
-                  <p className="font-bold text-lg">Spotify 플레이리스트 생성 중...</p>
-                  <p className="text-sm text-gray-400 mt-1">잠시만 기다려주세요 (약 5~10초)</p>
-                </div>
-            </div>
-        </div>
-      )}
-    </div>
+    </>
   );
 }

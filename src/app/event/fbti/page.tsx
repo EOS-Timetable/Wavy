@@ -1,6 +1,7 @@
 'use client'
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
 import { 
   ChevronRight, 
   Share2, 
@@ -8,7 +9,6 @@ import {
   Sparkles,
   Music,
   CheckCircle2,
-  Link
 } from 'lucide-react';
 
 // --- TYPES & INTERFACES ---
@@ -309,7 +309,7 @@ export default function App() {
               className="space-y-6"
             >
               <StickerCard className="text-center py-12 relative overflow-hidden">
-                <div className="absolute top-4 left-4 bg-black text-white px-3 py-1 text-xs font-black uppercase tracking-widest">WAVY 2024</div>
+                <div className="absolute top-4 left-4 bg-black text-white px-3 py-1 text-xs font-black uppercase tracking-widest">WAVY 2026</div>
                 <h1 className="text-7xl font-brand font-black mb-1 italic leading-none text-black tracking-tighter">
                   MY<br/>TYPE
                 </h1>
@@ -358,8 +358,11 @@ export default function App() {
                 <div className="space-y-4">
                   {QUESTIONS[currentIdx].options.map((opt, i) => (
                     <motion.button
-                      key={i}
+                      key={`${currentIdx}-${i}`}
                       whileTap={{ scale: 0.96 }}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2, delay: i * 0.1 }}
                       onClick={() => handleAnswer(opt.weight)}
                       className="w-full p-5 text-left border-4 border-black rounded-2xl font-black text-lg hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-between group shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1"
                     >
@@ -374,13 +377,14 @@ export default function App() {
           {view === 'result' && resultType && (
             <motion.div 
               key="result"
-              initial={{ opacity: 0, scale: 0.5, rotate: -10 }}
-              animate={{ opacity: 1, scale: 1, rotate: 0 }}
-              className="space-y-6"
+              initial={{ opacity: 0, scale: 0.95, y: 20 }} // 애니메이션 살짝 수정 (위로 올라오듯)
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              className="pb-10" // 하단 스크롤 여유 공간 확보
             >
-              <StickerCard className="text-center relative pt-16 pb-8 overflow-hidden">
-                {/* 배경 이미지 레이어 */}
-                <div className="absolute top-0 left-0 w-full h-48 -z-10 overflow-hidden">
+              <StickerCard className="text-center relative pt-12 pb-6 px-5 overflow-hidden flex flex-col h-full">
+                
+                {/* --- [배경 이미지] --- */}
+                <div className="absolute top-0 left-0 w-full h-40 -z-10 overflow-hidden">
                   <img 
                     src={CHARACTER_DATA[resultType].bgImageUrl} 
                     alt="background" 
@@ -389,71 +393,91 @@ export default function App() {
                   <div className={`absolute inset-0 bg-gradient-to-b ${CHARACTER_DATA[resultType].gradient} opacity-60`} />
                 </div>
                 
-                <div className="inline-block bg-white border-2 border-black px-4 py-1 rounded-full text-xs font-black mb-4 uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                  나의 페스티벌 캐릭터는?
-                </div>
-                
-                <h1 className="text-4xl font-black mb-8 leading-none italic tracking-tighter">
-                  {CHARACTER_DATA[resultType].title}
-                </h1>
-
-                {/* 캐릭터 이미지 (컨테이너 세로 길이에 맞게 설정) */}
-                <div className="relative w-full h-[200px] flex items-center justify-center mb-10 overflow-hidden">
-                  <motion.img 
-                    initial={{ scale: 1, opacity: 0, y: 20 }}
-                    animate={{ scale: 1.2, opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                    src={CHARACTER_DATA[resultType].characterImageUrl} 
-                    alt={resultType} 
-                    className="h-full w-auto object-contain pointer-events-none" 
-                  />
-                </div>
-
-                <div className="bg-[#FFF5F5] border-4 border-black rounded-2xl p-6 mb-8 text-left shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                  <p className="text-gray-900 font-black leading-relaxed whitespace-pre-line text-lg italic tracking-tight">
-                    "{CHARACTER_DATA[resultType].description}"
-                  </p>
-                </div>
-
-                {/* 왜 Wavy인가? 섹션 추가 */}
-                <div className="bg-indigo-50 border-4 border-indigo-600 rounded-3xl p-6 mb-8 mx-2 text-left relative">
-                  <div className="absolute -top-4 left-6 bg-indigo-600 text-white px-3 py-1 rounded-full text-[10px] font-black italic">WHY WAVY?</div>
-                  <ul className="space-y-3 pt-2">
-                    {CHARACTER_DATA[resultType].whyWavy.map((reason, idx) => (
-                      <li key={idx} className="flex items-start gap-2">
-                        <CheckCircle2 size={18} className="text-indigo-600 mt-0.5 flex-shrink-0" />
-                        <span className="text-indigo-900 font-black text-sm leading-tight break-keep">{reason}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="space-y-4">
-                  <motion.a 
-                    href="/"
-                    className="w-full bg-black text-white py-5 rounded-2xl font-black text-lg border-4 border-black shadow-[4px_4px_0px_0px_rgba(79,70,229,1)] hover:translate-y-1 hover:shadow-none transition-all flex items-center justify-center gap-3 no-underline"
-                  >
-                    Wavy로 200% 즐기러 가기 <ChevronRight size={24} strokeWidth={4} />
-                  </motion.a>
+                {/* --- [헤더: 타이틀 & 캐릭터] --- */}
+                <div className="flex flex-col items-center mb-6">
+                  <div className="inline-block bg-white border-2 border-black px-3 py-1 rounded-full text-[10px] md:text-xs font-black mb-3 uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                    나의 페스티벌 캐릭터는?
+                  </div>
                   
-                  <div className="grid grid-cols-2 gap-4">
-                    <button className="bg-white text-black py-4 rounded-2xl font-black border-4 border-black flex items-center justify-center gap-2 hover:bg-gray-50 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-y-1 transition-all">
-                      <Share2 size={20} strokeWidth={3} /> 공유하기
+                  {/* 폰트 크기 반응형 적용 (모바일 3xl, PC 4xl) */}
+                  <h1 className="text-3xl md:text-4xl font-black mb-6 leading-none italic tracking-tighter break-keep">
+                    {CHARACTER_DATA[resultType].title}
+                  </h1>
+
+                  {/* 캐릭터 이미지 영역 */}
+                  <div className="flex-1 min-h-0 relative flex items-center justify-center my-1 overflow-hidden rounded-xl">
+                    <motion.img 
+                      initial={{ scale: 0.8, opacity: 0, y: 20 }}
+                      // [핵심 변경 2] scale: 1.2 -> 영역 안에서 내용물만 20% 확대
+                      animate={{ scale: 1.1, opacity: 1, y: 0 }} 
+                      transition={{ delay: 0.2, type: "spring", stiffness: 120 }}
+                      src={CHARACTER_DATA[resultType].characterImageUrl} 
+                      alt={resultType} 
+                      // object-contain: 비율 유지
+                      className="max-h-full w-auto object-contain drop-shadow-2xl" 
+                    />
+                  </div>
+                </div>
+
+                {/* --- [본문: 설명 & 이유] (간격 gap-4로 통일) --- */}
+                <div className="flex flex-col gap-4 mb-8">
+                  
+                  {/* 설명 박스 */}
+                  <div className="bg-[#FFF5F5] border-4 border-black rounded-2xl p-5 text-left shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
+                    <p className="text-gray-900 font-black leading-relaxed whitespace-pre-line text-base md:text-lg italic tracking-tight">
+                      "{CHARACTER_DATA[resultType].description}"
+                    </p>
+                  </div>
+
+                  {/* Why Wavy 박스 */}
+                  <div className="bg-indigo-50 border-4 border-indigo-600 rounded-2xl p-5 mt-2 text-left relative">
+                    <div className="absolute -top-3 left-4 bg-indigo-600 text-white px-3 py-1 rounded-full text-[10px] font-black italic shadow-sm">
+                      WHY WAVY?
+                    </div>
+                    <ul className="space-y-2 pt-1">
+                      {CHARACTER_DATA[resultType].whyWavy.map((reason, idx) => (
+                        <li key={idx} className="flex items-start gap-2">
+                          <CheckCircle2 size={16} className="text-indigo-600 mt-0.5 flex-shrink-0" />
+                          <span className="text-indigo-900 font-bold text-xs md:text-sm leading-snug break-keep">
+                            {reason}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                {/* --- [하단 버튼 그룹] --- */}
+                <div className="space-y-3 mt-auto"> {/* mt-auto로 내용이 짧아도 버튼을 하단으로 밀어줌 */}
+                  <Link href="/" className="block"> {/* Next/Link 사용 권장, 여기선 a태그 대신 div로 감쌈 */}
+                    <motion.button 
+                      whileTap={{ scale: 0.98 }}
+                      className="w-full bg-black text-white py-4 rounded-2xl font-black text-base md:text-lg border-4 border-black shadow-[4px_4px_0px_0px_rgba(79,70,229,1)] hover:translate-y-1 hover:shadow-none transition-all flex items-center justify-center gap-2"
+                    >
+                      Wavy로 200% 즐기기 <ChevronRight size={20} strokeWidth={4} />
+                    </motion.button>
+                  </Link>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <button className="bg-white text-black py-3 rounded-2xl font-black text-sm border-4 border-black flex items-center justify-center gap-2 hover:bg-gray-50 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-y-1 transition-all active:scale-95">
+                      <Share2 size={18} strokeWidth={3} /> 공유하기
                     </button>
                     <button 
                       onClick={startQuiz}
-                      className="bg-white text-black py-4 rounded-2xl font-black border-4 border-black flex items-center justify-center gap-2 hover:bg-gray-50 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-y-1 transition-all"
+                      className="bg-white text-black py-3 rounded-2xl font-black text-sm border-4 border-black flex items-center justify-center gap-2 hover:bg-gray-50 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-y-1 transition-all active:scale-95"
                     >
-                      <RefreshCcw size={20} strokeWidth={3} /> 다시하기
+                      <RefreshCcw size={18} strokeWidth={3} /> 다시하기
                     </button>
                   </div>
                 </div>
+
               </StickerCard>
 
-              <div className="flex justify-center items-center gap-2 py-4">
-                <Sparkles className="text-yellow-500 w-4 h-4" />
-                <p className="text-gray-500 font-black text-xs uppercase tracking-widest">Powered by Wavy Core</p>
-                <Sparkles className="text-yellow-500 w-4 h-4" />
+              {/* 푸터 로고 */}
+              <div className="flex justify-center items-center gap-2 py-6 opacity-60">
+                <Sparkles className="text-yellow-500 w-3 h-3" />
+                <p className="text-gray-500 font-black text-[10px] uppercase tracking-widest">Powered by Wavy Core</p>
+                <Sparkles className="text-yellow-500 w-3 h-3" />
               </div>
             </motion.div>
           )}
