@@ -709,11 +709,11 @@ export default function MyTimetablePage() {
             </p>
             
             {/* 메인으로 돌아가는 버튼이나, 새 시간표 만들기 버튼 등 연결 */}
-            <Link
-            href="/" // 메인(축제 선택 등)으로 이동 가정
-            className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold py-3 px-6 rounded-xl transition-all"
+            <Link 
+                href="/" 
+                className="bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-bold py-3 px-6 rounded-xl transition-all shadow-lg shadow-cyan-500/20"
             >
-            <span>홈으로 가기</span>
+                홈으로 가기
             </Link>
         </div>
         )}
