@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import TimetableTemplate from "@/components/timetable/TimetableTemplate";
-import { List, Loader2, Save, RotateCcw, X, Trash2, CheckCircle, ArrowRight } from "lucide-react"; 
+import { List, Loader2, Save, RotateCcw, X, Trash2, CheckCircle, ArrowRight, Link } from "lucide-react"; 
 
 import {
   DndContext, 
@@ -685,6 +685,38 @@ export default function MyTimetablePage() {
             </div>
         ) : null}
       </DragOverlay>
+
+      {/* 1. 로딩 중일 때 표시 */}
+        {loading && (
+        <div className="fixed inset-0 flex items-center justify-center bg-slate-950 z-50">
+            <div className="flex flex-col items-center gap-4">
+            <Loader2 className="animate-spin text-cyan-400" size={40} />
+            <span className="text-slate-400 font-bold">불러오는 중...</span>
+            </div>
+        </div>
+        )}
+
+        {/* 2. 로딩 끝났는데 데이터가 없을 때 (빈 화면) 표시 */}
+        {!loading && !currentTimetable && (
+        <div className="fixed inset-0 flex flex-col items-center justify-center bg-slate-950 text-white p-6 z-40">
+            <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mb-4">
+            <List size={32} className="text-slate-400" />
+            </div>
+            <h2 className="text-xl font-bold mb-2">저장된 시간표가 없어요</h2>
+            <p className="text-slate-400 text-center mb-6 max-w-xs">
+            아직 생성된 시간표가 없습니다.<br/>
+            새로운 시간표를 만들어보세요!
+            </p>
+            
+            {/* 메인으로 돌아가는 버튼이나, 새 시간표 만들기 버튼 등 연결 */}
+            <Link
+            href="/" // 메인(축제 선택 등)으로 이동 가정
+            className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold py-3 px-6 rounded-xl transition-all"
+            >
+            홈으로 가기
+            </Link>
+        </div>
+        )}
 
       {/* 메인 템플릿 */}
       {currentTimetable && (
