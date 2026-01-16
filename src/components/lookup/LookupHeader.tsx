@@ -13,14 +13,21 @@ interface Festival {
   poster_url?: string;
 }
 
+interface Artist {
+  id: string;
+  name: string;
+}
+
 interface LookupHeaderProps {
   festivals: Festival[];
+  artists: Artist[];
   onSearch: (query: string) => void;
   onSelectFestival: (festivalId: string) => void;
 }
 
 export default function LookupHeader({
   festivals,
+  artists,
   onSearch,
   onSelectFestival,
 }: LookupHeaderProps) {
@@ -40,6 +47,7 @@ export default function LookupHeader({
       <div className="max-w-2xl mx-auto">
         <SearchField
           festivals={festivals}
+          artists={artists}
           onSearch={onSearch}
           onSelectFestival={onSelectFestival}
         />

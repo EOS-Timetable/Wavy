@@ -13,11 +13,17 @@ interface Festival {
   poster_url?: string;
 }
 
-interface LookupViewProps {
-  festivals: Festival[];
+interface Artist {
+  id: string;
+  name: string;
 }
 
-export default function LookupView({ festivals }: LookupViewProps) {
+interface LookupViewProps {
+  festivals: Festival[];
+  artists: Artist[];
+}
+
+export default function LookupView({ festivals, artists }: LookupViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFestivalId, setSelectedFestivalId] = useState<
     string | undefined
@@ -61,6 +67,7 @@ export default function LookupView({ festivals }: LookupViewProps) {
     <div className="min-h-screen bg-slate-950 text-white p-6 pb-24">
       <LookupHeader
         festivals={festivals}
+        artists={artists}
         onSearch={handleSearch}
         onSelectFestival={handleSelectFestival}
       />

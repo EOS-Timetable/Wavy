@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import LookupView from "@/components/lookup/LookupView";
+import { getAllMockArtists } from "@/utils/mockDataFetcher";
 
 export const revalidate = 0; // 페이지를 캐싱하지 않고 매번 최신 데이터 로드
 
@@ -19,5 +20,12 @@ export default async function LookupPage() {
     );
   }
 
-  return <LookupView festivals={festivals || []} />;
+  // 목업 데이터에서 아티스트 목록 가져오기
+  const mockArtists = getAllMockArtists();
+  const artists = mockArtists.map((a) => ({
+    id: a.id.toString(),
+    name: a.name,
+  }));
+
+  return <LookupView festivals={festivals || []} artists={artists} />;
 }

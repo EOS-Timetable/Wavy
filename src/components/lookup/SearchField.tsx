@@ -1,7 +1,9 @@
 "use client";
 
-import { Search } from "lucide-react";
+import { Search, Music, Calendar } from "lucide-react";
 import { useState, useMemo, useRef, useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface Festival {
   id: string;
@@ -12,32 +14,45 @@ interface Festival {
   poster_url?: string;
 }
 
+interface Artist {
+  id: string;
+  name: string;
+}
+
 interface SearchFieldProps {
   festivals: Festival[];
+  artists: Artist[];
   onSearch: (query: string) => void;
   onSelectFestival: (festivalId: string) => void;
 }
 
 export default function SearchField({
   festivals,
+  artists,
   onSearch,
   onSelectFestival,
 }: SearchFieldProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
-  // 자동완성 후보 리스트 (최대 5개)
+  // 자동완성 후보 리스트 (페스티벌 + 아티스트, 최대 5개)
   const suggestions = useMemo(() => {
     if (!searchQuery.trim()) return [];
 
     const query = searchQuery.toLowerCase();
-    const matched = festivals
+    const matchedFestivals = festivals
       .filter((festival) => festival.name.toLowerCase().includes(query))
-      .slice(0, 5);
+      .map((f) => ({ ...f, type: "festival" as const }));
 
-    return matched;
-  }, [searchQuery, festivals]);
+    const matchedArtists = artists
+      .filter((artist) => artist.name.toLowerCase().includes(query))
+      .map((a) => ({ ...a, type: "artist" as const }));
+
+    // 페스티벌과 아티스트를 합쳐서 최대 5개 반환
+    return [...matchedFestivals, ...matchedArtists].slice(0, 5);
+  }, [searchQuery, festivals, artists]);
 
   // 외부 클릭 시 자동완성 닫기
   useEffect(() => {
@@ -61,16 +76,55 @@ export default function SearchField({
     onSearch(value);
   };
 
-  const handleSuggestionClick = (festival: Festival) => {
-    setSearchQuery(festival.name);
-    setShowSuggestions(false);
-    onSelectFestival(festival.id);
+  const handleSuggestionClick = (
+    item: (Festival & { type: "festival" }) | (Artist & { type: "artist" })
+  ) => {
+    if (item.type === "artist") {
+      setSearchQuery(item.name);
+      setShowSuggestions(false);
+      // 아티스트 페이지로 이동은 Link로 처리
+    } else {
+      setSearchQuery(item.name);
+      setShowSuggestions(false);
+      onSelectFestival(item.id);
+    }
   };
 
   const handleSearch = () => {
-    if (searchQuery.trim()) {
-      onSearch(searchQuery);
+    if (!searchQuery.trim()) {
+      setShowSuggestions(false);
+      return;
     }
+
+    const query = searchQuery.trim().toLowerCase();
+
+    // 1. 정확히 일치하는 아티스트 찾기
+    const exactArtistMatch = artists.find(
+      (artist) => artist.name.toLowerCase() === query
+    );
+
+    if (exactArtistMatch) {
+      // 아티스트 페이지로 이동
+      router.push(`/artist/${exactArtistMatch.id}`);
+      setShowSuggestions(false);
+      return;
+    }
+
+    // 2. 정확히 일치하는 페스티벌 찾기
+    const exactFestivalMatch = festivals.find(
+      (festival) => festival.name.toLowerCase() === query
+    );
+
+    if (exactFestivalMatch) {
+      // 페스티벌 선택
+      onSelectFestival(exactFestivalMatch.id);
+      setSearchQuery(exactFestivalMatch.name);
+      setShowSuggestions(false);
+      return;
+    }
+
+    // 3. 일치하는 항목이 없으면 일반 검색 수행
+    onSearch(searchQuery);
     setShowSuggestions(false);
   };
 
@@ -103,15 +157,41 @@ export default function SearchField({
       {/* 자동완성 후보 리스트 */}
       {showSuggestions && suggestions.length > 0 && (
         <div className="absolute top-full left-0 right-0 mt-2 bg-white/10 border border-white/20 rounded-lg overflow-hidden z-10 backdrop-blur-sm">
-          {suggestions.map((festival) => (
-            <button
-              key={festival.id}
-              onClick={() => handleSuggestionClick(festival)}
-              className="w-full px-4 py-3 text-left text-white hover:bg-white/10 transition-colors border-b border-white/5 last:border-b-0"
-            >
-              {festival.name}
-            </button>
-          ))}
+          {suggestions.map((item) => {
+            if (item.type === "artist") {
+              return (
+                <Link
+                  key={`artist-${item.id}`}
+                  href={`/artist/${item.id}`}
+                  onClick={() => {
+                    setSearchQuery(item.name);
+                    setShowSuggestions(false);
+                  }}
+                  className="w-full px-4 py-3 text-left text-white hover:bg-white/10 transition-colors border-b border-white/5 last:border-b-0 flex items-center gap-2"
+                >
+                  <Music className="w-4 h-4 text-purple-400" />
+                  <span>{item.name}</span>
+                  <span className="ml-auto text-xs text-gray-400">
+                    아티스트
+                  </span>
+                </Link>
+              );
+            } else {
+              return (
+                <button
+                  key={`festival-${item.id}`}
+                  onClick={() => handleSuggestionClick(item)}
+                  className="w-full px-4 py-3 text-left text-white hover:bg-white/10 transition-colors border-b border-white/5 last:border-b-0 flex items-center gap-2"
+                >
+                  <Calendar className="w-4 h-4 text-blue-400" />
+                  <span>{item.name}</span>
+                  <span className="ml-auto text-xs text-gray-400">
+                    페스티벌
+                  </span>
+                </button>
+              );
+            }
+          })}
         </div>
       )}
     </div>
