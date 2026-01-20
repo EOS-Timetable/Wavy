@@ -1,4 +1,5 @@
 import { Music } from "lucide-react";
+import SpotifyEmbed from "@/components/SpotifyEmbed";
 
 interface SetlistSectionProps {
   trackIds?: string[];
@@ -16,14 +17,14 @@ export default function SetlistSection({ trackIds }: SetlistSectionProps) {
     : "";
 
   return (
-    <section className="mb-8">
-      <div className="flex items-center gap-2 mb-4">
+    <section className="mb-5">
+      <div className="flex items-center gap-2 mb-5">
         <Music className="w-5 h-5 text-blue-400" />
         <h2 className="text-xl font-bold">Setlist</h2>
       </div>
 
       {trackIds && trackIds.length > 0 ? (
-        <div className="space-y-3">
+        <div className="space-y-5">
           {trackIds.map((id, index) => {
             const cleanId = cleanTrackId(id);
             return (
@@ -32,15 +33,9 @@ export default function SetlistSection({ trackIds }: SetlistSectionProps) {
                 className="bg-[#161b29]/80 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden"
                 style={{ height: "152px" }}
               >
-                <iframe
-                  src={`https://open.spotify.com/embed/track/${cleanId}?utm_source=generator&theme=0&view=list`}
-                  width="100%"
-                  height="152"
-                  frameBorder="0"
-                  allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                  loading="lazy"
-                  style={{ height: "152px", display: "block" }}
-                />
+                <div className="group w-full h-[152px]">
+                  <SpotifyEmbed type="track" id={cleanId} />
+                </div>
               </div>
             );
           })}

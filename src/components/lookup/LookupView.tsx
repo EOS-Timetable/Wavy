@@ -4,6 +4,8 @@ import { useState } from "react";
 import LookupHeader from "./LookupHeader";
 import FestivalList from "./FestivalList";
 
+export type SortOption = "imminent" | "popular";
+
 interface Festival {
   id: string;
   name: string;
@@ -28,6 +30,8 @@ export default function LookupView({ festivals, artists }: LookupViewProps) {
   const [selectedFestivalId, setSelectedFestivalId] = useState<
     string | undefined
   >();
+  const [sortOption, setSortOption] = useState<SortOption>("imminent");
+  const [excludeEnded, setExcludeEnded] = useState(false);
 
   // 날짜 포맷팅 함수
   const formatDate = (dateString: string) => {
@@ -64,20 +68,28 @@ export default function LookupView({ festivals, artists }: LookupViewProps) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white p-6 pb-24">
-      <LookupHeader
-        festivals={festivals}
-        artists={artists}
-        onSearch={handleSearch}
-        onSelectFestival={handleSelectFestival}
-      />
-      <FestivalList
-        festivals={festivals}
-        searchQuery={searchQuery}
-        selectedFestivalId={selectedFestivalId}
-        formatDate={formatDate}
-        getDDay={getDDay}
-      />
+    <div className="min-h-screen bg-slate-950 text-white pb-20">
+      <div className="max-w-5xl mx-auto">
+        <LookupHeader
+          festivals={festivals}
+          artists={artists}
+          onSearch={handleSearch}
+          onSelectFestival={handleSelectFestival}
+          sortOption={sortOption}
+          onSortChange={setSortOption}
+          excludeEnded={excludeEnded}
+          onExcludeEndedChange={setExcludeEnded}
+        />
+        <FestivalList
+          festivals={festivals}
+          searchQuery={searchQuery}
+          selectedFestivalId={selectedFestivalId}
+          formatDate={formatDate}
+          getDDay={getDDay}
+          sortOption={sortOption}
+          excludeEnded={excludeEnded}
+        />
+      </div>
     </div>
   );
 }

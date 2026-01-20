@@ -1,9 +1,12 @@
 "use client";
 
-import { Search, Music, Calendar } from "lucide-react";
+import { Search, Music, Calendar, Clock } from "lucide-react";
 import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useDeviceId } from "@/hooks/useDeviceId";
+import { getRecentSearches, saveSearchHistory } from "@/utils/dataFetcher";
+import { supabase } from "@/lib/supabase";
 
 interface Festival {
   id: string;
@@ -34,8 +37,23 @@ export default function SearchField({
 }: SearchFieldProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showRecentSearches, setShowRecentSearches] = useState(false);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const searchRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const deviceId = useDeviceId();
+
+  // 최근 검색어 로드
+  useEffect(() => {
+    if (!deviceId) return;
+    
+    async function loadRecentSearches() {
+      const searches = await getRecentSearches(deviceId as string, 5);
+      setRecentSearches(searches.map((s) => s.query));
+    }
+    
+    loadRecentSearches();
+  }, [deviceId]);
 
   // 자동완성 후보 리스트 (페스티벌 + 아티스트, 최대 5개)
   const suggestions = useMemo(() => {
@@ -73,7 +91,30 @@ export default function SearchField({
     const value = e.target.value;
     setSearchQuery(value);
     setShowSuggestions(value.length > 0);
+    setShowRecentSearches(false);
     onSearch(value);
+  };
+
+  const handleFocus = () => {
+    if (searchQuery.length > 0) {
+      setShowSuggestions(true);
+    } else {
+      setShowRecentSearches(true);
+    }
+  };
+
+  const handleRecentSearchClick = async (query: string) => {
+    setSearchQuery(query);
+    setShowRecentSearches(false);
+    setShowSuggestions(false);
+    
+    // 검색 기록 저장
+    if (deviceId) {
+      const { data: { user } } = await supabase.auth.getUser();
+      await saveSearchHistory(deviceId, query, user?.id || null);
+    }
+    
+    onSearch(query);
   };
 
   const handleSuggestionClick = (
@@ -90,29 +131,38 @@ export default function SearchField({
     }
   };
 
-  const handleSearch = () => {
+  const handleSearch = async () => {
     if (!searchQuery.trim()) {
       setShowSuggestions(false);
+      setShowRecentSearches(false);
       return;
     }
 
-    const query = searchQuery.trim().toLowerCase();
+    const query = searchQuery.trim();
+    const queryLower = query.toLowerCase();
+
+    // 검색 기록 저장
+    if (deviceId) {
+      const { data: { user } } = await supabase.auth.getUser();
+      await saveSearchHistory(deviceId, query, user?.id || null);
+    }
 
     // 1. 정확히 일치하는 아티스트 찾기
     const exactArtistMatch = artists.find(
-      (artist) => artist.name.toLowerCase() === query
+      (artist) => artist.name.toLowerCase() === queryLower
     );
 
     if (exactArtistMatch) {
       // 아티스트 페이지로 이동
       router.push(`/artist/${exactArtistMatch.id}`);
       setShowSuggestions(false);
+      setShowRecentSearches(false);
       return;
     }
 
     // 2. 정확히 일치하는 페스티벌 찾기
     const exactFestivalMatch = festivals.find(
-      (festival) => festival.name.toLowerCase() === query
+      (festival) => festival.name.toLowerCase() === queryLower
     );
 
     if (exactFestivalMatch) {
@@ -120,12 +170,14 @@ export default function SearchField({
       onSelectFestival(exactFestivalMatch.id);
       setSearchQuery(exactFestivalMatch.name);
       setShowSuggestions(false);
+      setShowRecentSearches(false);
       return;
     }
 
     // 3. 일치하는 항목이 없으면 일반 검색 수행
-    onSearch(searchQuery);
+    onSearch(query);
     setShowSuggestions(false);
+    setShowRecentSearches(false);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -142,7 +194,7 @@ export default function SearchField({
           value={searchQuery}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
-          onFocus={() => setShowSuggestions(searchQuery.length > 0)}
+          onFocus={handleFocus}
           placeholder="Find your vibe"
           className="w-full px-4 py-3 pr-12 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-white/40 focus:bg-white/15 transition-all"
         />
@@ -153,6 +205,25 @@ export default function SearchField({
           <Search className="w-5 h-5" />
         </button>
       </div>
+
+      {/* 최근 검색어 목록 (검색어 입력 없을 때) */}
+      {showRecentSearches && recentSearches.length > 0 && !searchQuery && (
+        <div className="absolute top-full left-0 right-0 mt-2 bg-white/10 border border-white/20 rounded-lg overflow-hidden z-10 backdrop-blur-sm">
+          <div className="px-4 py-2 text-xs text-gray-400 border-b border-white/5">
+            최근 검색어
+          </div>
+          {recentSearches.map((query, index) => (
+            <button
+              key={`recent-${index}`}
+              onClick={() => handleRecentSearchClick(query)}
+              className="w-full px-4 py-3 text-left text-white hover:bg-white/10 transition-colors border-b border-white/5 last:border-b-0 flex items-center gap-2"
+            >
+              <Clock className="w-4 h-4 text-gray-400" />
+              <span>{query}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* 자동완성 후보 리스트 */}
       {showSuggestions && suggestions.length > 0 && (

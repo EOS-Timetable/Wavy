@@ -6,6 +6,8 @@ export interface MockArtist {
   imageUrl: string;
   spotifyId: string;
   trackIds?: string[]; // Spotify 트랙 ID 목록
+  description?: string; // 아티스트 바이오/설명
+  tags?: string[]; // 아티스트 태그 (#슬램, #떼창 등)
 }
 
 export interface MockFestival {
@@ -96,6 +98,13 @@ export const getMockArtistFestivalPerformance = (
 export const getMockFestival = (id: string): MockFestival | null => {
   const festival = mockData.festivals.find((f) => f.id === parseInt(id));
   return festival || null;
+};
+
+// 모든 페스티벌 목록 가져오기 (홈 페이지용)
+export const getAllMockFestivals = (): MockFestival[] => {
+  return mockData.festivals.sort(
+    (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+  );
 };
 
 // 특정 아티스트의 특정 페스티벌 공연 영상 가져오기

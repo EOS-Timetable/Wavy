@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import Navbar from "@/components/layout/Navbar";
 
 // 1. 뷰포트 설정 (모바일 최적화)
 export const viewport: Viewport = {
@@ -29,6 +30,7 @@ export default function RootLayout({
     <html lang="ko">
       <body className="bg-[#0a0e17] text-white antialiased">
         {children}
+        <Navbar />
       </body>
     </html>
   );

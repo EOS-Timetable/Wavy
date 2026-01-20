@@ -10,7 +10,7 @@ export default function FestivalPoster({
   festivalName,
 }: FestivalPosterProps) {
   return (
-    <div className="relative w-full max-w-[440px] mx-auto lg:mx-0 rounded-lg overflow-hidden border border-white/10 shadow-xl">
+    <div className="relative w-full max-w-[320px] mx-auto lg:mx-0 rounded-lg overflow-hidden border border-white/10 shadow-xl">
       <div className="relative w-full aspect-[2/3] lg:aspect-auto lg:h-full">
         <Image
           src={posterUrl}

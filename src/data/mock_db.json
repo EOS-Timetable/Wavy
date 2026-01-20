@@ -3,16 +3,16 @@
     {
       "id": 1,
       "name": "Incheon Pentaport Rock Festival 2025",
-      "startDate": "2025-08-01T00:00:00",
-      "endDate": "2025-08-03T23:59:59",
+      "startDate": "2026-01-20T00:00:00",
+      "endDate": "2026-01-22T23:59:59",
       "location": "Songdo Moonlight Festival Park",
       "posterUrl": "https://i.namu.wiki/i/JhXPjDXOVmox2ey4AQ2iRVkr5LeOMBE32gK6EgzVz5OLPmElPHrWKdtStyeLQsJQ0kWTgOkQbW6zIdkex8nb1Q.webp"
     },
     {
       "id": 2,
       "name": "2025 Busan International Rock Festival",
-      "startDate": "2025-09-26T00:00:00",
-      "endDate": "2025-09-28T23:59:59",
+      "startDate": "2026-01-25T00:00:00",
+      "endDate": "2026-01-27T23:59:59",
       "location": "Samrak Ecological Park",
       "posterUrl": "/images/busan_poster.jpg"
     }
@@ -67,13 +67,17 @@
       "id": 1,
       "name": "김뜻돌 (Meaningful Stone)",
       "imageUrl": "",
-      "spotifyId": ""
+      "spotifyId": "",
+      "description": "김뜻돌은 감성적인 보컬과 섬세한 기타 연주로 유명한 싱어송라이터입니다. 따뜻한 멜로디와 진솔한 가사로 많은 이들의 마음을 울리는 아티스트입니다.",
+      "tags": ["#감성", "#어쿠스틱", "#싱어송라이터"]
     },
     {
       "id": 2,
       "name": "리도어 (Redoor)",
       "imageUrl": "",
       "spotifyId": "",
+      "description": "리도어는 한국의 인디 록 밴드로, 감성적인 멜로디와 강렬한 사운드로 많은 사랑을 받고 있습니다.",
+      "tags": ["#슬램", "#떼창", "#인디록", "#라이브"],
       "trackIds": [
         "3tbHqU6PKS2bIGWx9cn082?si=16719fd54f0c48ec",
         "3R56jKicl9gSzdJxcr4wrd?si=6c9b111dabe6481d",
@@ -91,7 +95,9 @@
       "id": 3,
       "name": "너드커넥션 (Nerd Connection)",
       "imageUrl": "",
-      "spotifyId": ""
+      "spotifyId": "",
+      "description": "너드커넥션은 팝 록과 인디 팝의 경계를 넘나드는 독특한 사운드로 주목받는 밴드입니다. 경쾌한 비트와 중독성 있는 멜로디가 특징입니다.",
+      "tags": ["#팝록", "#인디팝", "#경쾌"]
     },
     { "id": 4, "name": "터치드 (Touched)", "imageUrl": "", "spotifyId": "" },
     { "id": 5, "name": "LITTLE SIMZ", "imageUrl": "", "spotifyId": "" },
@@ -132,7 +138,9 @@
       "id": 14,
       "name": "크라잉넛 (Crying Nut)",
       "imageUrl": "",
-      "spotifyId": ""
+      "spotifyId": "",
+      "description": "크라잉넛은 한국 펑크 록의 대표 밴드로, 1990년대부터 지금까지 한국 록 음악의 역사를 만들어온 레전드 밴드입니다. 강렬한 에너지와 관객과의 소통이 뛰어난 라이브로 유명합니다.",
+      "tags": ["#펑크록", "#레전드", "#떼창", "#에너지"]
     },
     { "id": 15, "name": "김승주", "imageUrl": "", "spotifyId": "" },
     { "id": 16, "name": "HYANG", "imageUrl": "", "spotifyId": "" },
