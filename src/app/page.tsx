@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import Link from "next/link";
 import Image from "next/image";
 import { Search } from 'lucide-react';
+import { signInWithSocial } from "@/utils/authActions";
 
 export default function LandingPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -187,7 +188,25 @@ export default function LandingPage() {
               음악과 사람이 연결되는 새로운 물결
             </p>
           </div>
+          <div className="w-full max-w-sm space-y-4">
 
+          {/* 카카오 로그인 */}
+          <button 
+            onClick={() => signInWithSocial('kakao')}
+            className="mt-4 px-6 py-2 bg-white text-black rounded-full font-bold hover:bg-gray-200 transition-all"
+          >
+            kakao로 테스트 로그인
+          </button>
+
+          {/* 구글 로그인 */}
+          <button 
+            onClick={() => signInWithSocial('google')}
+            className="mt-4 px-6 py-2 bg-white text-black rounded-full font-bold hover:bg-gray-200 transition-all"
+          >
+            Google로 테스트 로그인
+          </button>
+        </div>
+          
           {/* CTA Button */}
           <Link
             href="/home"
