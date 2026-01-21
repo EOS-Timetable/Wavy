@@ -1,8 +1,9 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase";
 import LookupView from "@/components/lookup/LookupView";
 import { getAllMockArtists } from "@/utils/mockDataFetcher";
 
 export const revalidate = 0; // 페이지를 캐싱하지 않고 매번 최신 데이터 로드
+const supabase = createClient();
 
 export default async function LookupPage() {
   // Supabase에서 페스티벌 목록 가져오기

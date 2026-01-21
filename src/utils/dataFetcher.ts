@@ -1,11 +1,30 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase";
 
-// --- Types (DB ID는 UUID이므로 string으로 변경!) ---
+const supabase = createClient();
+
+// --- Types ---
 export interface Artist {
   id: string;
   name: string;
   imageUrl?: string;
   spotifyId?: string;
+  description?: string;
+  tags?: string[];
+}
+
+export interface Festival {
+  id: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  posterUrl?: string;
+  placeName: string;
+  address?: string;
+  latitude: number;
+  longitude: number;
+  bookingInfo?: any[];
+  officialLinks?: any;
+  saveCount?: number;
 }
 
 export interface Stage {
@@ -18,105 +37,115 @@ export interface Stage {
 export interface PerformanceJoined {
   id: string;
   stageId: string;
-  startTime: string; // ISO String
-  endTime: string; // ISO String
+  startTime: string;
+  endTime: string;
   artist: Artist;
   stage: Stage;
   dayNumber: number;
+  congestionLevel?: string;
 }
 
-// --- Helper Functions (Async로 변경) ---
+// --- Fetcher Functions ---
 
-// 1. 페스티벌 정보 가져오기
-export const getFestival = async (id: string) => {
+// 1. 페스티벌 정보 조회
+export const getFestival = async (id: string): Promise<Festival | null> => {
   const { data, error } = await supabase
     .from("festivals")
     .select("*")
     .eq("id", id)
     .single();
 
-  if (error) return null;
+  if (error || !data) return null;
 
-  // DB의 snake_case -> UI의 camelCase 매핑
   return {
     ...data,
     startDate: data.start_date,
     endDate: data.end_date,
+    posterUrl: data.poster_url,
+    placeName: data.place_name,
+    bookingInfo: data.booking_info,
+    officialLinks: data.official_links,
+    saveCount: data.save_count,
   };
 };
 
-// 2. 스테이지 목록 가져오기
+// 2. 전체 라인업 조회 (중복 제거)
+export const getFestivalArtists = async (festivalId: string): Promise<Artist[]> => {
+  const { data, error } = await supabase
+    .from("performances")
+    .select(`
+      artist:artists ( id, name, image_url, description, tags, spotify_id )
+    `)
+    .eq("festival_id", festivalId);
+
+  if (error || !data) return [];
+
+  const artistsMap = new Map();
+  data.forEach((p: any) => {
+    if (p.artist) {
+      artistsMap.set(p.artist.id, {
+        id: p.artist.id,
+        name: p.artist.name,
+        imageUrl: p.artist.image_url,
+        description: p.artist.description,
+        tags: p.artist.tags,
+        spotifyId: p.artist.spotify_id,
+      });
+    }
+  });
+
+  return Array.from(artistsMap.values());
+};
+
+// 3. 스테이지 목록 조회
 export const getStages = async (festivalId: string): Promise<Stage[]> => {
   const { data, error } = await supabase
     .from("stages")
     .select("*")
     .eq("festival_id", festivalId)
-    .order("position", { ascending: true });
+    .order("position");
 
   if (error || !data) return [];
 
-  return data.map((item) => ({
-    id: item.id,
-    festivalId: item.festival_id,
-    name: item.name,
-    color: item.color,
+  return data.map((s: any) => ({
+    id: s.id,
+    festivalId: s.festival_id,
+    name: s.name,
+    color: s.color,
   }));
 };
 
-// 3. 날짜 목록 계산하기
-export const getFestivalDates = async (
-  festivalId: string
-): Promise<string[]> => {
-  const festival = await getFestival(festivalId);
-  if (!festival) return [];
-
-  const start = new Date(festival.startDate);
-  const end = new Date(festival.endDate);
-  const dates: string[] = [];
-
-  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    dates.push(`${year}-${month}-${day}`);
-  }
-
-  return dates;
-};
-
-// 4. 특정 날짜의 공연 데이터 가져오기 (핵심 조인)
-export const getPerformancesByDay = async (
-  festivalId: string,
-  dayNumber: number
-): Promise<PerformanceJoined[]> => {
+// 4. 일차별 공연 목록 조회 (혼잡도 뷰 활용)
+export const getPerformancesByDay = async (festivalId: string, dayNumber: number): Promise<PerformanceJoined[]> => {
   const { data, error } = await supabase
-    .from("performances")
-    .select(
-      `
+    .from("performance_congestion_view")
+    .select(`
       *,
-      stage:stages ( * ),
-      artist:artists ( * )
-    `
-    )
+      artist:artists (*),
+      stage:stages (*)
+    `)
     .eq("festival_id", festivalId)
-    .eq("day_number", dayNumber) // ✅ 핵심: DB에 적힌 '일차'로만 가져옴 (시간 계산 X)
+    .eq("day_number", dayNumber)
     .order("start_time");
 
   if (error || !data) {
-    console.error("Error fetching performances:", error);
+    console.error("공연 목록 조회 에러:", error?.message);
     return [];
   }
 
-  // 데이터 매핑
   return data.map((p: any) => ({
     id: p.id,
     stageId: p.stage_id,
     startTime: p.start_time,
     endTime: p.end_time,
+    dayNumber: p.day_number,
     artist: {
       id: p.artist.id,
       name: p.artist.name,
       imageUrl: p.artist.image_url,
+      description: p.artist.description,
+      tags: p.artist.tags,
+      spotifyId: p.artist.spotify_id,
     },
     stage: {
       id: p.stage.id,
@@ -124,40 +153,77 @@ export const getPerformancesByDay = async (
       name: p.stage.name,
       color: p.stage.color,
     },
-    dayNumber: p.day_number,
+    congestionLevel: p.congestion_level || '정보없음'
   }));
 };
 
-// 5. 페스티벌의 모든 아티스트 라인업 가져오기 (중복 제거)
-export const getFestivalArtists = async (
-  festivalId: string
-): Promise<Artist[]> => {
-  const { data, error } = await supabase
-    .from("performances")
-    .select(
-      `
-      artist:artists ( id, name, image_url )
-    `
-    )
-    .eq("festival_id", festivalId);
+// 5. 전체 인기도 통합 동기화 (userId 전용으로 수정)
+export const syncUnifiedPopularity = async (
+  festivalId: string,
+  userId: string 
+) => {
+  console.log(`[Sync] Target: Festival(${festivalId}), User(${userId})`);
+  // 1. 해당 사용자의 모든 타임테이블 조회
+  const { data: allTimetables, error: fetchError } = await supabase
+    .from("my_timetables")
+    .select("selected_ids")
+    .eq("festival_id", festivalId)
+    .eq("user_id", userId);
 
-  if (error || !data) {
-    console.error("Error fetching artists:", error);
-    return [];
+  if (fetchError) {
+    console.error("[Sync] Fetch Error:", fetchError);
+    throw fetchError;
   }
+  console.log(`[Sync] Found Timetables: ${allTimetables?.length}`);
 
-  // 중복 제거 (같은 아티스트가 여러 날 공연할 수 있음)
-  const uniqueArtists = new Map<string, Artist>();
-
-  data.forEach((p: any) => {
-    if (p.artist && !uniqueArtists.has(p.artist.id)) {
-      uniqueArtists.set(p.artist.id, {
-        id: p.artist.id,
-        name: p.artist.name,
-        imageUrl: p.artist.image_url,
-      });
-    }
+  // 2. 중복 없는 합집합 생성
+  const unifiedIds = new Set<string>();
+  allTimetables?.forEach((t: { selected_ids: string[] | null }) => {
+    (t.selected_ids || []).forEach((id: string) => unifiedIds.add(id));
   });
 
-  return Array.from(uniqueArtists.values());
+  // 3. 기존 내역 삭제
+  await supabase
+    .from("user_saved_performances")
+    .delete()
+    .eq("festival_id", festivalId)
+    .eq("user_id", userId);
+
+  // 4. 일괄 삽입
+  if (unifiedIds.size > 0) {
+    const insertData = Array.from(unifiedIds).map(id => ({
+      performance_id: id,
+      festival_id: festivalId,
+      user_id: userId,
+    }));
+
+    const { error: insertError } = await supabase
+      .from("user_saved_performances")
+      .insert(insertData);
+
+    if (insertError) throw insertError;
+  }
+};
+
+// 6. 페스티벌 날짜 배열 생성
+export const getFestivalDates = async (festivalId: string): Promise<string[]> => {
+  const { data, error } = await supabase
+    .from("festivals")
+    .select("start_date, end_date")
+    .eq("id", festivalId)
+    .single();
+
+  if (error || !data) return [];
+
+  const start = new Date(data.start_date);
+  const end = new Date(data.end_date);
+  const dates: string[] = [];
+
+  const current = new Date(start);
+  while (current <= end) {
+    dates.push(current.toISOString().split("T")[0]);
+    current.setDate(current.getDate() + 1);
+  }
+
+  return dates;
 };

@@ -1,38 +1,43 @@
 "use client";
 
 import React, { useRef, useState } from "react";
-import { useParams, useRouter } from "next/navigation"; // ⚡ useRouter 추가
+import { useParams, useRouter } from "next/navigation";
 import TimetableTemplate from "@/components/timetable/TimetableTemplate";
-import { Save, Loader2, X, ArrowRight, CheckCircle } from "lucide-react"; // ⚡ 아이콘 추가
+import { Save, Loader2, X, ArrowRight, CheckCircle } from "lucide-react";
 
 // API 및 유틸리티
-import { getFestival } from "@/utils/dataFetcher";
+import { getFestival, syncUnifiedPopularity } from "@/utils/dataFetcher";
 import { getMyTimetables, saveMyTimetable } from "@/utils/myTimetableFetcher";
-import { useDeviceId } from "@/hooks/useDeviceId";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function FestivalTimetablePage() {
-  const router = useRouter(); // ⚡ 페이지 이동을 위한 훅
+  const router = useRouter();
   const params = useParams();
   const festivalId = params.id as string;
-  const deviceId = useDeviceId();
+  
+  // 로그인 유저 정보 가져오기
+  const { user } = useAuth();
   
   // 상태 관리
   const [isSaving, setIsSaving] = useState(false);
-  const [showSaveModal, setShowSaveModal] = useState(false); // 이름 입력 모달
+  const [showSaveModal, setShowSaveModal] = useState(false);
   const [planTitle, setPlanTitle] = useState(""); 
-  const [showSuccessModal, setShowSuccessModal] = useState(false); // 성공 확인 모달
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [existingTitles, setExistingTitles] = useState<Set<string>>(new Set());
 
   const selectedIdsRef = useRef<Set<string>>(new Set());
 
-  // 선택 변경 핸들러
   const handleSelectionChange = (ids: Set<string>) => {
     selectedIdsRef.current = ids;
   };
 
-  // 1. [저장하기] 버튼 클릭 시 -> 이름 입력 모달 열기
+  // 1. [저장하기] 버튼 클릭 시
   const handleOpenSaveModal = async () => {
-    if (!deviceId) return;
+    // user 존재 여부 확인
+    if (!user) {
+      alert("로그인이 필요한 서비스입니다.");
+      return;
+    }
 
     const currentSelected = Array.from(selectedIdsRef.current);
     if (currentSelected.length === 0) {
@@ -42,14 +47,14 @@ export default function FestivalTimetablePage() {
     
     setPlanTitle(""); 
     setShowSaveModal(true); 
-    // 모달 열릴 때 내 타임테이블 목록을 가져와서 이름만 추출해둠
+
     try {
-      const myLists = await getMyTimetables(deviceId);
+      // ⚡ getMyTimetables 호출 시 user.id 사용
+      const myLists = await getMyTimetables(user.id);
       
-      // festivalId와 일치하는 항목만 필터링하여 Set 생성
       const titles = new Set(
         myLists
-          .filter((item: any) => item.festival_id === festivalId) // 같은 페스티벌인지 확인
+          .filter((item: any) => item.festival_id === festivalId)
           .map((item: any) => item.title)
       );
       
@@ -59,12 +64,12 @@ export default function FestivalTimetablePage() {
     }
   };
 
-  // 2. 이름 입력 후 [확인] 클릭 시 -> 실제 DB 저장
+  // 2. 이름 입력 후 [확인] 클릭 시
   const handleConfirmSave = async () => {
-    if (!deviceId) return;
+    if (!user) return; // ⚡ user 확인
 
     if (!planTitle.trim()) {
-      alert("플랜 이름을 입력해주세요 (예: Plan A, 토요일 공격형)");
+      alert("플랜 이름을 입력해주세요.");
       return;
     }
 
@@ -79,27 +84,26 @@ export default function FestivalTimetablePage() {
         festivalId,
         festivalName,
         planTitle,
-        deviceId,
-        currentSelected
+        currentSelected,
+        user.id,
       );
 
       if (error) throw error;
+      await syncUnifiedPopularity(festivalId, user.id);
       
-      // ✅ 성공 처리 변경: alert 제거 -> 모달 스위칭
-      setShowSaveModal(false);     // 입력창 닫기
-      setShowSuccessModal(true);   // 성공 모달 열기!
+      setShowSaveModal(false);
+      setShowSuccessModal(true);
       
-    } catch (e) {
-      console.error("Save failed:", e);
+    } catch (e : any) {
+      console.error("Save failed:", e?.message || e);
       alert("저장 중 오류가 발생했습니다.");
     } finally {
       setIsSaving(false);
     }
   };
 
-  // 3. ⚡ [보러 가기] 핸들러
   const handleGoToMyList = () => {
-    router.push('/timetable'); // 내 타임테이블 목록 페이지로 이동
+    router.push('/timetable');
   };
 
   return (

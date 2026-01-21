@@ -1,5 +1,4 @@
-import { supabase } from "@/lib/supabase";
-import { getFestivalArtists } from "@/utils/dataFetcher";
+import { getFestival, getFestivalArtists } from "@/utils/dataFetcher";
 import FestivalPoster from "@/components/festival/FestivalPoster";
 import FestivalHeader from "@/components/festival/FestivalHeader";
 import LineupSection from "@/components/festival/LineupSection";
@@ -14,21 +13,8 @@ interface PageProps {
 // 1. 서버 컴포넌트: DB에서 직접 데이터를 가져옵니다.
 export default async function FestivalDetailPage({ params }: PageProps) {
   const { id } = await params;
-
-  // Supabase에서 페스티벌 정보 조회
-  const { data: festival, error } = await supabase
-    .from("festivals")
-    .select("*")
-    .eq("id", id)
-    .single();
-
-  if (error || !festival) {
-    return (
-      <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
-        <p>페스티벌 정보를 찾을 수 없습니다.</p>
-      </div>
-    );
-  }
+  const festival = await getFestival(id);
+  if (!festival) return <div>정보를 찾을 수 없습니다.</div>;
 
   // 라인업 아티스트 가져오기
   const artists = await getFestivalArtists(id);
@@ -44,20 +30,8 @@ export default async function FestivalDetailPage({ params }: PageProps) {
 
   // 포스터 이미지 URL (festival.poster_url이 있으면 사용, 없으면 더미 이미지)
   const posterUrl =
-    festival.poster_url ||
+    festival.posterUrl ||
     "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?q=80&w=2070&auto=format&fit=crop";
-
-  // 예매처 정보 파싱 (JSON 배열 또는 null)
-  const bookingVendors = festival.booking_vendors
-    ? Array.isArray(festival.booking_vendors)
-      ? festival.booking_vendors
-      : JSON.parse(festival.booking_vendors)
-    : undefined;
-
-  // 공식 홈페이지 URL (ticket_url을 official_url로 사용)
-  const officialUrl = festival.official_url || festival.ticket_url || "#";
-
-  // 전체 아티스트 사용
 
   return (
     <div className="min-h-screen bg-slate-950 text-white overflow-x-hidden flex items-center justify-center">
@@ -72,9 +46,9 @@ export default async function FestivalDetailPage({ params }: PageProps) {
             {/* 타이틀 */}
             <FestivalHeader
               name={festival.name}
-              startDate={festival.start_date}
-              endDate={festival.end_date}
-              placeName={festival.place_name}
+              startDate={festival.startDate}
+              endDate={festival.endDate}
+              placeName={festival.placeName}
               formatDate={formatDate}
             />
 
@@ -88,19 +62,16 @@ export default async function FestivalDetailPage({ params }: PageProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
               {/* 오시는 길 */}
               <LocationSection
-                placeName={festival.place_name}
-                address={festival.address}
+                placeName={festival.placeName}
+                address={festival.address || ""}
                 latitude={festival.latitude}
                 longitude={festival.longitude}
               />
 
               {/* 예매 정보 */}
               <TicketInfoSection
-                ticket1stOpenDate={festival.ticket_1st_open_date}
-                ticket2ndOpenDate={festival.ticket_2nd_open_date}
-                ticket3rdOpenDate={festival.ticket_3rd_open_date}
-                bookingVendors={bookingVendors}
-                officialUrl={officialUrl}
+                bookingInfo={festival.bookingInfo}
+                officialLinks={festival.officialLinks}
                 formatDate={formatDate}
               />
             </div>

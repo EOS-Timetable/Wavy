@@ -1,11 +1,12 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase";
+const supabase = createClient();
 
 export interface MyTimetable {
   id: string;
   festival_id: string;
   festival_name: string;
   title: string;
-  device_id: string;
+  user_id?: string;
   selected_ids: string[]; // DB에서는 jsonb지만 여기선 string[]으로 받음
   created_at: string;
   updated_at: string;
@@ -18,21 +19,22 @@ export const saveMyTimetable = async (
   festivalId: string,
   festivalName: string,
   title: string,
-  deviceId: string,
-  selectedIds: string[]
+  selectedIds: string[],
+  userId: string // 유저 ID 추가 수용
 ) => {
+  // 메타데이터 저장 (my_timetables)
   const { data, error } = await supabase
     .from("my_timetables")
     .upsert(
       {
-        device_id: deviceId,
+        user_id: userId,
         festival_id: festivalId,
         festival_name: festivalName,
         title: title,
         selected_ids: selectedIds,
         updated_at: new Date().toISOString(),
       },
-      { onConflict: "device_id, festival_id, title" } // 아까 만든 유니크 인덱스 기준
+      { onConflict: "user_id, festival_id, title" }
     )
     .select();
 
@@ -52,18 +54,18 @@ export const updateMyTimetableById = async (
       selected_ids: selectedIds,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", id) // ⚡ 여기가 핵심: ID가 일치하는 녀석만 수정함
+    .eq("id", id) // ID가 일치하는 녀석만 수정함
     .select();
 
   return { data, error };
 };
 
-// 목록 불러오기
-export const getMyTimetables = async (deviceId: string) => {
+// 목록 불러오기 (유저 전용)
+export const getMyTimetables = async (userId: string) => {
   const { data, error } = await supabase
     .from("my_timetables")
     .select("*")
-    .eq("device_id", deviceId)
+    .eq("user_id", userId)
     .order("position", { ascending: true })
     .order("updated_at", { ascending: false });
 
@@ -74,7 +76,7 @@ export const getMyTimetables = async (deviceId: string) => {
   return data as MyTimetable[];
 };
 
-// [신규] 순서 일괄 업데이트
+// 순서 일괄 업데이트
 export const updateTimetableOrder = async (updates: MyTimetable[]) => {
   const { error } = await supabase
     .from("my_timetables")

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import TimetableTemplate from "@/components/timetable/TimetableTemplate";
-import { List, Loader2, Save, RotateCcw, X, Trash2, CheckCircle, ArrowRight} from "lucide-react"; 
+import { List, Loader2, Save, RotateCcw, X, Trash2, CheckCircle, GripVertical } from "lucide-react"; 
 import Link from "next/link";
 
 import {
@@ -39,7 +39,8 @@ import {
   updateTimetableOrder,
   MyTimetable 
 } from "@/utils/myTimetableFetcher";
-import { useDeviceId } from "@/hooks/useDeviceId";
+import { useAuth } from "@/hooks/useAuth";
+import { syncUnifiedPopularity } from "@/utils/dataFetcher";
 
 // ------------------------------------------------------------------
 // 0. 커스텀 Modifier: 그룹 범위 제한 & 가로 중앙 고정
@@ -64,7 +65,7 @@ const restrictToGroupBounds: Modifier = ({
     newY = containerNodeRect.top - draggingNodeRect.top;
   }
 
-  // ⚡ [핵심] 하단 제한 수정: 카드의 중심이 Trash Zone의 중심까지만 가도록
+  // 하단 제한 수정: 카드의 중심이 Trash Zone의 중심까지만 가도록
   // Trash Zone 높이(h-32 = 128px)의 절반 = 64px
   const TRASH_ZONE_HALF_HEIGHT = 64;
   const cardHalfHeight = draggingNodeRect.height / 2;
@@ -108,23 +109,41 @@ function AnimatedSortableItem({ item, isActive, onClick }: { item: MyTimetable, 
     <div
       ref={setNodeRef}
       style={style}
-      {...attributes}
-      {...listeners}
-      onClick={onClick}
       className={`
-        group relative w-full text-left rounded-xl border transition-all cursor-pointer select-none
-        p-3 mb-2
+        group relative w-full text-left rounded-xl border transition-all select-none
+        transition-all duration-500 ease-out
+        mb-2 flex items-center justify-between overflow-hidden
         ${isActive 
           ? 'bg-cyan-950/40 border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.1)]' 
           : 'bg-slate-800 border-slate-700 hover:bg-slate-700 hover:border-slate-600'}
-        ${isDragging ? 'ring-2 ring-blue-500 opacity-50' : ''}
+        ${isDragging ? 'ring-2 ring-blue-500 opacity-50 scale-[1.03] shadow-2xl bg-slate-800/90' : ''}
       `}
     >
-      <div className="flex justify-between items-center">
-          <span className={`font-bold text-sm truncate ${isActive ? 'text-cyan-400' : 'text-slate-200'}`}>
-              {item.title} 
-          </span>
-          {isActive && <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse ml-2 flex-shrink-0"/>}
+      {/* 1. 클릭 및 제목 영역: 스크롤 간섭을 피하기 위해 여기서는 드래그가 발생하지 않음 */}
+      <div 
+        onClick={onClick}
+        className="flex-1 flex items-center gap-2 p-3 cursor-pointer min-w-0"
+      >
+        <span className={`font-bold text-sm truncate ${isActive ? 'text-cyan-400' : 'text-slate-200'}`}>
+          {item.title} 
+        </span>
+        {/* isActive 점을 제목 바로 옆으로 배치 */}
+        {isActive && (
+          <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse flex-shrink-0" />
+        )}
+      </div>
+
+      {/* 2. 드래그 핸들 영역: 실제 드래그 센서는 여기에만 부여 */}
+      <div
+        {...attributes}
+        {...listeners}
+        className={`
+          p-3 cursor-grab active:cursor-grabbing transition-colors
+          ${isActive ? 'text-cyan-500/50' : 'text-slate-600'}
+          hover:text-cyan-400
+        `}
+      >
+        <GripVertical size={18} />
       </div>
     </div>
   );
@@ -262,7 +281,7 @@ function FestivalGroup({
 // 4. 메인 페이지
 // ------------------------------------------------------------------
 export default function MyTimetablePage() {
-  const deviceId = useDeviceId();
+  const { user, loading: authLoading } = useAuth();
   
   // State
   const [savedList, setSavedList] = useState<MyTimetable[]>([]);
@@ -281,23 +300,22 @@ export default function MyTimetablePage() {
   const [activeFestivalGroup, setActiveFestivalGroup] = useState<string | null>(null);
   const [isOverTrash, setIsOverTrash] = useState(false);
   const [isOverGroup, setIsOverGroup] = useState(false);
-  // ⚡ [추가] 현재 커서가 위치한 대상의 ID 저장
+  // 현재 커서가 위치한 대상의 ID 저장
   const [currentOverId, setCurrentOverId] = useState<string | null>(null);
-
-  // ⚡ 스크롤 제어 상태
+  // 스크롤 제어 상태
   const [enableAutoScroll, setEnableAutoScroll] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 300, tolerance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  // ⚡ [추가] 스크롤 컨테이너 제어를 위한 ref
+  // 스크롤 컨테이너 제어를 위한 ref
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const pointerYRef = useRef<number>(0);
 
-  // ⚡ [핵심] 스크롤 강제 잠금 Effect
+  // 스크롤 강제 잠금 Effect
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
@@ -322,17 +340,18 @@ export default function MyTimetablePage() {
   // --- 데이터 로드 및 초기 선택 로직 ---
   useEffect(() => {
     async function loadData() {
-      if (!deviceId) return;
+      // 이미 데이터가 있고(savedList.length > 0), 인증 로딩 중이라면 리페칭을 방지합니다.
+      if (authLoading && savedList.length > 0) return;
+      // 인증 로딩 중이거나 유저가 없으면 중단
+      if (authLoading || !user) return;
+
       try {
-        setLoading(true);
-        const data = await getMyTimetables(deviceId);
-        
-        // 일단 전체 리스트는 position 또는 created_at 기준으로 정렬되어 온다고 가정
-        // 클라이언트에서 한 번 더 created_at 기준으로 1차 정렬 (최신순)
+        if (savedList.length === 0) setLoading(true);
+
+        const data = await getMyTimetables(user.id);
         const sortedData = data.sort((a, b) => 
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
-        
         setSavedList(sortedData);
 
         if (sortedData.length > 0) {
@@ -350,15 +369,17 @@ export default function MyTimetablePage() {
           } else {
             selectTimetable(latestItem);
           }
+        } else {
+          setCurrentTimetable(null);
         }
       } catch (error) { 
-        console.error(error); 
+        console.error("Focus Revalidation Error:", error); 
       } finally { 
         setLoading(false); 
       }
     }
     loadData();
-  }, [deviceId]);
+  }, [authLoading, user]);
 
   const selectTimetable = (target: MyTimetable) => {
     setCurrentTimetable(target);
@@ -367,12 +388,12 @@ export default function MyTimetablePage() {
     localStorage.setItem("wavy_last_viewed_id", target.id);
   };
 
-  // --- ⚡ 그룹화 로직 (1. 연도 -> 2. 페스티벌 최신순) ---
+  // --- 그룹화 로직 (1. 연도 -> 2. 페스티벌 최신순) ---
   const groupedTimetables = useMemo(() => {
     const groups: Record<string, Record<string, MyTimetable[]>> = {};
 
     savedList.forEach((item) => {
-      // ⚡ festival_date가 있으면 그걸 쓰고, 없으면 created_at 사용 (fallback)
+      // festival_date가 있으면 그걸 쓰고, 없으면 created_at 사용 (fallback)
       const dateSource = item.festival_date ? item.festival_date : item.created_at;
       const year = new Date(dateSource).getFullYear().toString();
       const festival = item.festival_name;
@@ -413,35 +434,70 @@ export default function MyTimetablePage() {
     return false;
   }, [currentTimetable, currentSelection, currentTitle]);
 
+  // 브라우저 종료 및 새로고침 방지
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasChanges) {
+        // 표준에 따라 반환값을 설정하고 이벤트를 방지합니다.
+        e.preventDefault();
+        e.returnValue = ""; // 크롬 등 대부분의 브라우저에서 경고창을 띄우기 위해 필요합니다.
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [hasChanges]);
+
   // 저장 로직 (이름 중복 체크)
   const handleUpdateSave = async () => {
-    if (!currentTimetable?.id || !deviceId) return;
-    if (!currentTitle.trim()) { alert("이름 입력 필요"); return; }
+    if (!currentTimetable?.id || !user) return;
+    if (!currentTitle.trim()) { alert("이름을 입력해주세요."); return; }
     
-    // [수정] 같은 페스티벌 내에서만 이름 중복 검사
+    // 같은 페스티벌 내에서만 이름 중복 검사
     const isDuplicate = savedList.some(item => 
       item.title === currentTitle && 
       item.id !== currentTimetable.id &&
       item.festival_id === currentTimetable.festival_id // 같은 페스티벌인지 확인
     );
 
-    if (isDuplicate && !confirm(`'${currentTitle}' 덮어쓰기?`)) {
+    if (isDuplicate && !confirm(`'${currentTitle}' 이름이 이미 존재합니다. 덮어쓰시겠습니까?`)) {
       setTempTitleName(currentTitle);
       setShowRenameModal(true);
       return;
     }
 
-     setIsSaving(true);
-     try {
-       const { error } = await updateMyTimetableById(currentTimetable.id, currentTitle, Array.from(currentSelection));
-       if (error) throw error;
-       setShowSuccessModal(true); 
-       
-       const newData = await getMyTimetables(deviceId);
-       setSavedList(newData);
+    // 1. 저장 시작 (로딩 활성화)
+    setIsSaving(true);
+    try {
+      const { data, error } = await updateMyTimetableById(currentTimetable.id, currentTitle, Array.from(currentSelection));
+      
+      if (error) throw error;
 
-     } catch (e) { console.error(e); alert("실패"); }
-     finally { setIsSaving(false); }
+      console.log("인기도 동기화 시작...");
+      await syncUnifiedPopularity(currentTimetable.festival_id, user.id);
+      console.log("인기도 동기화 완료!");
+      
+      if (data && data[0]) {
+        const updatedItem = data[0];
+        
+        // 현재 선택된 타임테이블 객체를 DB에서 받은 최신 데이터로 교체
+        setCurrentTimetable(updatedItem);
+        // 리스트에서도 해당 아이템을 최신화 (전체를 다시 불러오는 대신 메모리 상에서 교체하여 속도 향상)
+        setSavedList(prev => prev.map(item => item.id === updatedItem.id ? updatedItem : item));
+      }
+
+      // 2. 로딩 종료 및 성공 알림
+      setIsSaving(false);
+      setShowSuccessModal(true); 
+
+    } catch (e) { 
+      setIsSaving(false); 
+      console.error(e); 
+      setTimeout(() => alert("저장 중 오류가 발생했습니다. 다시 시도해주세요."), 100);
+    }
   };
   
   const handleReset = () => { if(currentTimetable && confirm("되돌릴까요?")) selectTimetable(currentTimetable); };
@@ -449,11 +505,11 @@ export default function MyTimetablePage() {
   const openRenameModal = () => { setTempTitleName(currentTitle); setShowRenameModal(true); };
   const applyRename = () => { setCurrentTitle(tempTitleName); setShowRenameModal(false); };
 
-  // ⚡ [수정] 충돌 감지 로직 강화 (Overshoot 처리)
+  // 충돌 감지 로직 강화 (Overshoot 처리)
   const customCollisionDetection: CollisionDetection = (args) => {
     const { active, droppableContainers, pointerCoordinates } = args;
 
-    // ⚡ [추가] 현재 마우스 Y 좌표를 실시간으로 저장 (handleDragOver에서 쓰기 위해)
+    // 현재 마우스 Y 좌표를 실시간으로 저장 (handleDragOver에서 쓰기 위해)
     if (pointerCoordinates) {
       pointerYRef.current = pointerCoordinates.y;
     }
@@ -472,7 +528,7 @@ export default function MyTimetablePage() {
             return [trashContainer];
           }
 
-          // 2. ⚡ [핵심] 커서가 Trash Zone보다 아래에 있는 경우 (빠른 드래그/오버슈트)
+          // 2. 커서가 Trash Zone보다 아래에 있는 경우 (빠른 드래그/오버슈트)
           // X축 범위 내에 있고, Y축이 바닥보다 아래면 충돌로 인정
           const { x, y } = pointerCoordinates;
           if (y > rect.bottom && x >= rect.left && x <= rect.right) {
@@ -518,7 +574,7 @@ export default function MyTimetablePage() {
         // 2. 현재 마우스 Y 좌표 (CollisionDetection에서 저장해둔 값)
         const currentPointerY = pointerYRef.current;
 
-        // 3. ⚡ [핵심 로직] "바닥 감지 구역(Hot Zone)" 설정
+        // 3. "바닥 감지 구역(Hot Zone)" 설정
         // 컨테이너 바닥에서 80px 위까지를 '스크롤이 필요한 영역'으로 간주
         const bottomThreshold = containerRect.bottom - 80;
 
@@ -563,7 +619,7 @@ export default function MyTimetablePage() {
        return;
     }
 
-    // 2. 순서 변경 로직 (⚡ 정렬 오류 수정)
+    // 2. 순서 변경 로직
     if (active.id !== over.id) {
       const activeItem = savedList.find(i => i.id === active.id);
       const overItem = savedList.find(i => i.id === over.id);
@@ -573,7 +629,7 @@ export default function MyTimetablePage() {
       setSavedList((prevList) => {
         const targetFestival = activeItem.festival_name;
         
-        // ⚡ [중요] 시각적 순서(Position)대로 정렬된 배열을 먼저 만듭니다.
+        // 시각적 순서(Position)대로 정렬된 배열을 먼저 만듭니다.
         // 이렇게 해야 arrayMove가 화면에 보이는 그대로 인덱스를 계산합니다.
         const festivalItems = prevList
             .filter(item => item.festival_name === targetFestival)
@@ -606,6 +662,14 @@ export default function MyTimetablePage() {
       });
     }
   };
+
+  if (authLoading) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-slate-950 z-50">
+        <Loader2 className="animate-spin text-cyan-400" size={40} />
+      </div>
+    );
+  }
 
   return (
     <DndContext 
@@ -801,6 +865,12 @@ export default function MyTimetablePage() {
              <h3 className="text-xl font-bold text-white mb-2">저장 완료!</h3>
              <button onClick={() => setShowSuccessModal(false)} className="w-full py-3 mt-4 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-500">확인</button>
            </div>
+        </div>
+      )}
+      {/* 최하단 렌더링 부분*/}
+      {loading && savedList.length === 0 && ( // 데이터가 이미 있다면 로딩창을 띄우지 않음
+        <div className="fixed inset-0 flex items-center justify-center bg-slate-950 z-50">
+          <Loader2 className="animate-spin text-cyan-400" size={40} />
         </div>
       )}
     </DndContext>
