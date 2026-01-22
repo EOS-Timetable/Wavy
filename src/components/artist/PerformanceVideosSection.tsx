@@ -1,5 +1,6 @@
 import { Video } from "lucide-react";
 import Image from "next/image";
+import { getYouTubeThumbnail, getYouTubeVideoId } from "@/utils/externalThumbnail";
 
 interface PerformanceVideo {
   id: number;
@@ -12,40 +13,17 @@ interface PerformanceVideosSectionProps {
   videos: PerformanceVideo[];
 }
 
-// YouTube URL에서 video ID 추출
-const getYouTubeVideoId = (url: string): string | null => {
-  // youtu.be 형식: https://youtu.be/xCcm_r50N3k?si=...
-  const youtuBeMatch = url.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
-  if (youtuBeMatch) {
-    return youtuBeMatch[1];
-  }
-
-  // youtube.com/watch?v= 형식: https://www.youtube.com/watch?v=xCcm_r50N3k
-  const watchMatch = url.match(/[?&]v=([a-zA-Z0-9_-]+)/);
-  if (watchMatch) {
-    return watchMatch[1];
-  }
-
-  return null;
-};
-
-// YouTube video ID로 썸네일 URL 생성
-const getYouTubeThumbnail = (videoId: string): string => {
-  // maxresdefault: 최고 품질 (1280x720), 없으면 hqdefault로 fallback
-  return `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
-};
-
 export default function PerformanceVideosSection({
   videos,
 }: PerformanceVideosSectionProps) {
   return (
     <section>
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 mb-5">
         <Video className="w-5 h-5 text-purple-400" />
         <h2 className="text-xl font-bold">Performance Videos</h2>
       </div>
       {videos.length > 0 ? (
-        <div className="space-y-3">
+        <div className="space-y-5">
           {videos.map((video) => {
             const videoId = getYouTubeVideoId(video.videoUrl);
             const thumbnailUrl =

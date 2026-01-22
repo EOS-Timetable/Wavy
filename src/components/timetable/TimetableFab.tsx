@@ -21,7 +21,7 @@ export default function TimetableFab({ onMakeWallpaper, onMakePlaylist }: Timeta
   `;
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3 pointer-events-none">
+    <div className="fixed bottom-24 right-6 z-[60] flex flex-col items-end gap-3 pointer-events-none">
       
       {/* --- 메뉴 아이템들 (아래에서 위로 펼쳐짐) --- */}
       {/* 1. 예습 플리 만들기 */}

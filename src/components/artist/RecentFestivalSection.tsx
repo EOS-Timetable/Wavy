@@ -3,12 +3,12 @@ import Image from "next/image";
 import { Calendar, MapPin } from "lucide-react";
 
 interface MockFestival {
-  id: number;
+  id: string;
   name: string;
   startDate: string;
   endDate: string;
-  location: string;
-  posterUrl: string;
+  location?: string;
+  posterUrl?: string;
 }
 
 interface RecentFestivalSectionProps {
@@ -24,14 +24,14 @@ export default function RecentFestivalSection({
 }: RecentFestivalSectionProps) {
   return (
     <section>
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 mb-5">
         <Calendar className="w-5 h-5 text-purple-400" />
         <h2 className="text-xl font-bold">Recent Festival</h2>
       </div>
 
       {festivals.length > 0 ? (
         <div className="relative">
-          <div className="flex gap-4 overflow-x-auto scrollbar-responsive pb-2 scroll-smooth -mx-4 px-4">
+          <div className="flex gap-5 overflow-x-auto scrollbar-responsive pb-2 scroll-smooth -mx-4 px-4">
             {festivals.map((festival) => (
               <Link
                 key={festival.id}
@@ -68,7 +68,7 @@ export default function RecentFestivalSection({
                     </div>
                     <div className="flex items-center gap-2">
                       <MapPin className="w-4 h-4 text-purple-400" />
-                      <span className="truncate">{festival.location}</span>
+                      <span className="truncate">{festival.location || "장소 정보 없음"}</span>
                     </div>
                   </div>
                 </div>

@@ -1,17 +1,10 @@
 // src/components/festival/TicketInfoSection.tsx
 import { Ticket, ExternalLink, Globe } from "lucide-react";
-
-export interface BookingVendor {
-  tier: string;    // '1차 OPEN', '얼리버드' 등
-  date: string;    // '2025-05-01'
-  url: string;     // 예매 링크
-  is_open: boolean; // 오픈 여부
-  price?: string;
-}
+import { FestivalBookingInfoItem, FestivalOfficialLinks } from "@/utils/dataFetcher";
 
 interface TicketInfoSectionProps {
-  bookingInfo?: BookingVendor[]; // JSONB 데이터 규격 반영
-  officialLinks?: { [key: string]: string }; // JSONB 데이터 규격 반영
+  bookingInfo?: FestivalBookingInfoItem[]; // JSONB 데이터 규격 반영
+  officialLinks?: FestivalOfficialLinks; // JSONB 데이터 규격 반영
   formatDate: (dateString: string) => string;
 }
 
@@ -20,6 +13,10 @@ export default function TicketInfoSection({
   officialLinks = {},
   formatDate,
 }: TicketInfoSectionProps) {
+  // 렌더링 전 날짜순으로 정렬
+  const sortedInfo = [...bookingInfo].sort((a, b) => 
+    new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
   
   // 날짜 포맷팅 (MM/DD 형식)
   const formatDateShort = (dateString?: string) => {

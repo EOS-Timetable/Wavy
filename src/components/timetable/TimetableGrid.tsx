@@ -66,9 +66,9 @@ export default function TimetableGrid({
           >
             {performances
               .filter(p => p.stage.id === stage.id)
-              .map(perf => (
+              .map((perf, pIdx) => (
                 <PerformanceCard
-                  key={perf.id}
+                  key={perf.id|| `perf-${stage.id}-${pIdx}`}
                   data={perf}
                   isSelected={selectedIds.has(perf.id)}
                   onToggle={() => onToggleId(perf.id)}

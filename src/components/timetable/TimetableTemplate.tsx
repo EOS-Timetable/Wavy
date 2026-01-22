@@ -211,7 +211,12 @@ export default function TimetableTemplate({
       )}
 
       {/* FAB 버튼 */}
-      <TimetableFab onMakeWallpaper={handleMakeWallpaper} onMakePlaylist={handleMakePlaylist} />
+      {!isCreatingPlaylist && !createdPlaylistId && (
+        <TimetableFab 
+          onMakeWallpaper={handleMakeWallpaper} 
+          onMakePlaylist={handleMakePlaylist} 
+        />
+      )}
 
       {/* 로딩 오버레이 */}
       {isCreatingPlaylist && (

@@ -1,5 +1,3 @@
-"use client";
-
 import { Calendar, MapPin } from "lucide-react";
 
 interface FestivalInfoProps {
@@ -18,8 +16,8 @@ export default function FestivalInfo({
   formatDate,
 }: FestivalInfoProps) {
   return (
-    <div className="mb-6">
-      <h1 className="text-3xl md:text-4xl font-extrabold mb-4">
+    <div className="mb-5">
+      <h1 className="text-2xl md:text-3xl font-extrabold leading-tight mb-3">
         {festivalName}
       </h1>
       <div className="space-y-2 text-sm text-gray-300">

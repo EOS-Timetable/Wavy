@@ -1,19 +1,30 @@
-"use client";
-
+import { getArtistById, getArtistRecentFestivals } from "@/utils/dataFetcher";
+import { USE_MOCK_DATA } from "@/config/dataMode";
 import { getMockArtist, getMockArtistFestivals } from "@/utils/mockDataFetcher";
-import { useParams } from "next/navigation";
 import ArtistHeader from "@/components/artist/ArtistHeader";
 import ArtistImage from "@/components/artist/ArtistImage";
-import ArtistInfo from "@/components/artist/ArtistInfo";
+import ArtistInfoSection from "@/components/artist/ArtistInfoSection";
 import SongsSection from "@/components/artist/SongsSection";
 import RecentFestivalSection from "@/components/artist/RecentFestivalSection";
 
-export default function ArtistPage() {
-  const params = useParams();
-  const id = params.id as string;
+interface PageProps {
+  params: Promise<{ id: string }>;
+}
 
-  const artist = getMockArtist(id);
-  const festivals = getMockArtistFestivals(id);
+export default async function ArtistPage({ params }: PageProps) {
+  const { id } = await params;
+
+  const artist = USE_MOCK_DATA ? getMockArtist(id) : await getArtistById(id);
+  const festivals = USE_MOCK_DATA
+    ? getMockArtistFestivals(id).map((f) => ({
+        id: String(f.id),
+        name: f.name,
+        startDate: f.startDate,
+        endDate: f.endDate,
+        location: f.location,
+        posterUrl: f.posterUrl,
+      }))
+    : await getArtistRecentFestivals(id);
 
   if (!artist) {
     return (
@@ -32,21 +43,34 @@ export default function ArtistPage() {
     )}. ${String(date.getDate()).padStart(2, "0")}`;
   };
 
-  // 목업 팔로워 수 (실제로는 DB에서 가져와야 함)
-  const followerCount = 11231;
+  // TODO: followerCount는 추후 DB 컬럼/집계 생기면 교체
+  const followerCount = 0;
 
-  // 아티스트 이미지 URL (목업 데이터가 비어있으면 더미 이미지)
+  // 아티스트 이미지 URL (응답값을 최대한 사용 + 빈 문자열/프로토콜 정규화)
+  const normalizeImageUrl = (url?: string | null) => {
+    if (!url) return undefined;
+    const trimmed = String(url).trim();
+    if (!trimmed) return undefined;
+    if (trimmed.startsWith("http://")) return `https://${trimmed.slice("http://".length)}`;
+    return trimmed;
+  };
+
   const artistImageUrl =
-    artist.imageUrl ||
+    normalizeImageUrl((artist as any).imageUrl) ||
     "https://i.namu.wiki/i/ZfxxSn5nUPydUyntYJaCiAXgSPNpn6djNmUWgqvvEMcLRjimB12OA4PgqTg45idTHqa3T_WEN_u6AV3K4gnCQCKBf6wCluLnCkEhJpTpsMhiKp44pPlqx7Lhi97zfDDzj_A2W-KaoQ6pDeL7Q1350g.webp";
 
   return (
     <div className="min-h-screen bg-slate-950 text-white pb-20">
-      <ArtistHeader />
-      <ArtistImage imageUrl={artistImageUrl} artistName={artist.name} />
+      <ArtistHeader artistName={(artist as any).name} />
+      <ArtistImage imageUrl={artistImageUrl} artistName={(artist as any).name} />
       <div className="max-w-2xl mx-auto px-4 -mt-20 relative z-10">
-        <ArtistInfo artistName={artist.name} followerCount={followerCount} />
-        <SongsSection trackIds={artist.trackIds} />
+        <ArtistInfoSection
+          artistName={artist.name}
+          followerCount={followerCount}
+          description={artist.description}
+          tags={artist.tags}
+        />
+        <SongsSection trackIds={(artist as any).trackIds || []} />
         <RecentFestivalSection
           festivals={festivals}
           formatDate={formatDate}

@@ -28,10 +28,10 @@ export default function FestivalCard({
   return (
     <Link
       href={`/festival/${festival.id}`}
-      className="group relative bg-[#161b29]/80 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden hover:border-white/20 transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:shadow-white/10"
+      className="group relative bg-[#161b29]/60 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden hover:border-white/20 transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:shadow-white/10 w-[calc((100%-1.25rem-2rem)/2)] md:w-[calc((100%-3.75rem)/4)] h-40 md:h-48 flex flex-col"
     >
       {/* 카드 상단: 이미지 영역 */}
-      <div className="h-40 w-full relative overflow-hidden bg-slate-900">
+      <div className="h-20 md:h-24 w-full relative overflow-hidden bg-slate-900">
         {festival.poster_url ? (
           <Image
             src={festival.poster_url}
@@ -45,7 +45,7 @@ export default function FestivalCard({
         {/* D-Day 배지 */}
         <div
           className={`
-            absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-bold border backdrop-blur-md
+            absolute top-1.5 right-1.5 md:top-2 md:right-2 px-1.5 py-0.5 md:px-2 rounded-full text-[10px] md:text-xs font-bold border backdrop-blur-md
             ${
               isEnded
                 ? "bg-gray-800/50 border-gray-600 text-gray-400"
@@ -58,30 +58,22 @@ export default function FestivalCard({
       </div>
 
       {/* 카드 하단: 텍스트 정보 */}
-      <div className="p-5">
-        <h2 className="text-xl font-bold mb-3 text-white line-clamp-2 break-words">
-          {festival.name}
-        </h2>
-
-        <div className="space-y-2 text-sm text-gray-400">
-          <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-blue-400" />
-            <span>
-              {formatDate(festival.start_date)} ~{" "}
-              {formatDate(festival.end_date)}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <MapPin className="w-4 h-4 text-purple-400" />
-            <span className="truncate">{festival.place_name}</span>
-          </div>
-        </div>
-
-        {/* 바로가기 화살표 */}
-        <div className="mt-6 flex justify-end">
-          <div className="flex items-center gap-1 text-sm font-medium text-gray-500">
-            상세보기{" "}
-            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+      <div className="p-2 md:p-3 flex-1 flex flex-col justify-between">
+        <div>
+          <h2 className="text-xs md:text-sm font-bold mb-1 text-white line-clamp-2 break-words">
+            {festival.name}
+          </h2>
+          <div className="space-y-0.5 md:space-y-1 text-[10px] md:text-xs text-gray-400">
+            <div className="flex items-center gap-1">
+              <Calendar className="w-2.5 h-2.5 md:w-3 md:h-3 text-blue-400" />
+              <span className="line-clamp-1">
+                {formatDate(festival.start_date)} ~ {formatDate(festival.end_date)}
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              <MapPin className="w-2.5 h-2.5 md:w-3 md:h-3 text-purple-400" />
+              <span className="line-clamp-1 truncate">{festival.place_name}</span>
+            </div>
           </div>
         </div>
       </div>

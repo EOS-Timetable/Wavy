@@ -1,39 +1,186 @@
-'use client'
+"use client";
 
-import { useEffect } from "react";
-import Link from "next/link";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { 
-  Zap,
-  Sparkles,
-  Search,
-  Tent
-} from "lucide-react";
+import { Zap, Sparkles, Search, Tent } from "lucide-react";
+import Link from "next/link";
+
+// 1. 인증 및 UI 컴포넌트 (HEAD)
 import { useAuth } from "@/hooks/useAuth";
 import LogoutButton from "@/components/auth/LogoutButton";
 
+// 2. 홈 화면 기능 컴포넌트 (feature/home)
+import HomeHeader from "@/components/home/HomeHeader";
+import DDayBanner from "@/components/home/DDayBanner";
+import ThisYearSection from "@/components/home/ThisYearSection";
+import LegacySection from "@/components/home/LegacySection";
+
+// 3. 유틸리티 및 데이터
+import { getExternalThumbnailUrl } from "@/utils/externalThumbnail";
+import { USE_MOCK_DATA } from "@/config/dataMode";
+import { getMyTimetables } from "@/utils/myTimetableFetcher";
+import { createClient } from "@/lib/supabase";
+import {
+  getFestivalKey,
+  MOCK_HOME_FESTIVALS,
+  MOCK_LEGACY_CONTENTS,
+  MOCK_THIS_YEAR_CONTENTS,
+} from "@/data/homeMockContents";
+
+interface SavedFestival {
+  id: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  posterUrl?: string;
+}
+
+const supabase = createClient();
+
 export default function HomePage() {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const router = useRouter();
 
-  // 디버깅 로그
-  useEffect(() => {
-    console.log('[HomePage] Mounted!');
-    console.log('[HomePage] Loading:', loading);
-    console.log('[HomePage] User:', user?.email || 'null');
-    console.log('[HomePage] profile:', profile);
-  }, [loading, user, profile]);
+  const [selectedFestivalId, setSelectedFestivalId] = useState<string | undefined>();
+  const [thumbnailCache] = useState<Record<string, string>>({});
+  const [savedFestivalsDb, setSavedFestivalsDb] = useState<SavedFestival[]>([]);
+  const [dataLoading, setDataLoading] = useState(!USE_MOCK_DATA);
 
-  // 로그인 체크 - 반드시 로딩이 완료된 후에만 리다이렉트
-  // useEffect(() => {
-  //   if (!loading && !isAuthenticated) {
-  //     console.log('[HomePage] Not authenticated after loading, redirecting...');
-  //     router.push('/');
-  //   }
-  // }, [loading, isAuthenticated, router]);
+  // ✅ 목업/DB 모드 스위치
+  const savedFestivals: SavedFestival[] = USE_MOCK_DATA ? MOCK_HOME_FESTIVALS : savedFestivalsDb;
+
+  // DB 모드일 때만: 저장된 타임테이블 기반으로 페스티벌 목록 로드
+  useEffect(() => {
+    if (USE_MOCK_DATA) return;
+    if (!user?.id) {
+      if (!authLoading) setDataLoading(false);
+      return;
+    }
+
+    async function loadSavedFestivals() {
+      try {
+        setDataLoading(true);
+        const timetables = await getMyTimetables(user!.id);
+        const uniqueFestivalIds = Array.from(new Set(timetables.map((t) => t.festival_id)));
+        if (uniqueFestivalIds.length === 0) {
+          setSavedFestivalsDb([]);
+          return;
+        }
+
+        const { data: festivalsData, error: festivalsError } = await supabase
+          .from("festivals")
+          .select("id, name, start_date, end_date, poster_url")
+          .in("id", uniqueFestivalIds);
+
+        if (festivalsError) {
+          console.error("Error fetching festivals:", festivalsError);
+          setSavedFestivalsDb([]);
+          return;
+        }
+
+        const festivalById = new Map<string, any>(
+          (festivalsData || []).map((f: any) => [f.id, f])
+        );
+
+        const festivals: SavedFestival[] = uniqueFestivalIds
+          .map((festivalId) => {
+            const festival = festivalById.get(festivalId);
+            if (!festival) return null;
+
+            const startDate = festival.start_date
+              ? typeof festival.start_date === "string"
+                ? festival.start_date
+                : new Date(festival.start_date).toISOString().split("T")[0]
+              : "";
+            const endDate = festival.end_date
+              ? typeof festival.end_date === "string"
+                ? festival.end_date
+                : new Date(festival.end_date).toISOString().split("T")[0]
+              : "";
+
+            return {
+              id: festival.id,
+              name: festival.name,
+              startDate,
+              endDate,
+              posterUrl: festival.poster_url || undefined,
+            } as SavedFestival;
+          })
+          .filter((f): f is SavedFestival => f !== null);
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const sortedFestivals = [...festivals].sort((a, b) => {
+          const endA = a.endDate ? new Date(a.endDate).getTime() : -Infinity;
+          const endB = b.endDate ? new Date(b.endDate).getTime() : -Infinity;
+          const isEndedA = a.endDate ? new Date(a.endDate) < today : true;
+          const isEndedB = b.endDate ? new Date(b.endDate) < today : true;
+
+          if (isEndedA !== isEndedB) return isEndedA ? 1 : -1;
+          if (!isEndedA && !isEndedB) {
+            const startA = new Date(a.startDate).getTime();
+            const startB = new Date(b.startDate).getTime();
+            return startA - startB;
+          }
+          return endB - endA;
+        });
+
+        setSavedFestivalsDb(sortedFestivals);
+      } catch (error) {
+        console.error("Error loading saved festivals:", error);
+        setSavedFestivalsDb([]);
+      } finally {
+        setDataLoading(false);
+      }
+    }
+
+    loadSavedFestivals();
+  }, [user, authLoading]);
+
+  // 선택된 페스티벌 또는 가장 임박한 페스티벌
+  const currentFestival = useMemo(() => {
+    if (savedFestivals.length === 0) return null;
+    
+    // selectedFestivalId가 명시적으로 설정되어 있으면 (null이어도) 그것을 찾음
+    if (selectedFestivalId !== undefined) {
+      // null이면 명시적으로 선택 안 함을 의미하므로 null 반환
+      if (selectedFestivalId === null) return null;
+      
+      // 선택된 페스티벌 찾기
+      const found = savedFestivals.find((f) => f.id === selectedFestivalId);
+      if (found) return found;
+      // 찾을 수 없으면 null 반환 (명시적으로 선택했는데 없으면)
+      return null;
+    }
+    // selectedFestivalId가 undefined면 아직 선택 안 한 상태 → 가장 임박한 페스티벌 사용
+    return savedFestivals[0];
+  }, [savedFestivals, selectedFestivalId]);
+
+  // This Year와 Legacy 콘텐츠 가져오기 (목업 데이터)
+  const { thisYearContents, legacyContents } = useMemo(() => {
+    const festivalKey = currentFestival ? getFestivalKey(currentFestival.name) : null;
+    const thisYear = festivalKey && MOCK_THIS_YEAR_CONTENTS[festivalKey]
+      ? MOCK_THIS_YEAR_CONTENTS[festivalKey].map((item) => ({
+          ...item,
+          imageUrl:
+            thumbnailCache[item.linkUrl] ||
+            item.imageUrl ||
+            getExternalThumbnailUrl(item.linkUrl),
+        }))
+      : [];
+    const legacy = festivalKey && MOCK_LEGACY_CONTENTS[festivalKey]
+      ? MOCK_LEGACY_CONTENTS[festivalKey].map((item: any) => ({
+          ...item,
+          thumbnailUrl: item.thumbnailUrl || getExternalThumbnailUrl(item.linkUrl),
+        }))
+      : [];
+    return { thisYearContents: thisYear, legacyContents: legacy };
+  }, [currentFestival, thumbnailCache]);
+
 
   // 로딩 화면
-  if (loading && !user) {
+  if (authLoading && !user) {
     console.log('[HomePage] Rendering loading state');
     return (
       <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
@@ -57,139 +204,43 @@ export default function HomePage() {
 
   // 로그인된 상태 - 메인 콘텐츠
   console.log('[HomePage] Rendering main content');
-  return (
-    <main className="min-h-screen bg-slate-950 text-white selection:bg-cyan-500/30 flex flex-col items-center justify-center p-6 relative overflow-hidden">
-      
-      {/* 배경 효과 */}
-      <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-cyan-500/10 rounded-full blur-[120px] pointer-events-none"></div>
-      <div className="absolute bottom-[-10%] right-[-10%] w-[400px] h-[400px] bg-purple-600/10 rounded-full blur-[100px] pointer-events-none"></div>
 
-      {/* 헤더 */}
-      <header className="relative z-10 text-center mb-12">
-        <h1 className="text-4xl md:text-6xl font-black tracking-tighter mb-2">
-          <span className="text-slate-100">WAVY</span>
-        </h1>
-        <p className="text-slate-400 text-sm md:text-base font-medium">
-          Prototype HomePage
-        </p>
-        
-        {/* 로그인 정보 */}
-        {/* 프로필 이미지 영역 */}
-        <div className="mb-6 mt-6 relative w-20 h-20 flex items-center justify-center">
-          {profile?.avatar_url ? (
-            <img 
-              src={profile.avatar_url} 
-              alt="Profile" 
-              className="w-20 h-20 rounded-full border-2 border-cyan-500/50 object-cover shadow-xl shadow-cyan-500/20"
+  return (
+    <div className="min-h-screen bg-slate-950 text-white pb-20">
+      <div className="max-w-5xl mx-auto px-4">
+        {/* 🚀 통합된 반응형 헤더 (인사말 + 프로필 + 로그아웃) */}
+        <HomeHeader 
+          userName={profile?.nickname || user.email?.split('@')[0] || "재빈"} 
+          avatarUrl={profile?.avatar_url}
+        />
+        {/* D-Day / ThisYear / Legacy 섹션 간격 통일 */}
+        <div className="space-y-5">
+          <DDayBanner
+            savedFestivals={savedFestivals}
+            selectedFestivalId={selectedFestivalId}
+            onFestivalChange={setSelectedFestivalId}
+            withBottomMargin={false}
+          />
+
+          {/* This Year 섹션 - 저장된 페스티벌이 있을 때만 표시 */}
+          {currentFestival && (
+            <ThisYearSection
+              festivalId={currentFestival.id}
+              festivalName={currentFestival.name}
+              contents={thisYearContents}
             />
-          ) : (
-            <div className="w-20 h-20 rounded-full border-2 border-slate-700 bg-slate-800 flex items-center justify-center">
-              <Tent className="text-slate-500" size={32} />
-            </div>
           )}
-          {/* 상태 표시 점 (온라인 등) */}
-          <div className="absolute bottom-1 right-1 w-5 h-5 bg-green-500 border-2 border-slate-950 rounded-full"></div>
-        </div>
 
-        <div className="mt-4 p-4 border border-white/10 bg-slate-900/60 rounded-lg max-w-md mx-auto">
-          <LogoutButton />
-          <p className="text-xs text-slate-400 mt-2">
-            Welcome, <span className="text-cyan-400 font-bold">{profile?.nickname || user.email}</span>
-          </p>
-        </div>
-      </header>
-
-      {/* 네비게이션 카드 그리드 */}
-      <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-md md:max-w-2xl">
-        
-        <NavCard 
-          href="/" 
-          icon={<Tent size={28} />}
-          title="Main Landing"
-          desc="페스티벌 메인으로 이동"
-          colorClass="text-slate-100"
-        />
-
-        <NavCard 
-          href="/current" 
-          icon={<Zap size={28} />}
-          title="Live Current"
-          desc="실시간 현장 스레드 & 반응"
-          colorClass="text-yellow-400"
-          borderHover="group-hover:border-yellow-500/50"
-        />
-
-        <NavCard 
-          href="/event/fbti" 
-          icon={<Sparkles size={28} />}
-          title="Festival Type"
-          desc="나의 페스티벌 성향(FBTI) 찾기"
-          colorClass="text-purple-400"
-          borderHover="group-hover:border-purple-500/50"
-        />
-
-        <NavCard 
-          href="/lookup" 
-          icon={<Search size={28} />}
-          title="Search & Map"
-          desc="아티스트 및 정보 검색"
-          colorClass="text-cyan-400"
-          borderHover="group-hover:border-cyan-500/50"
-        />
-
-      </div>
-
-      {/* Footer */}
-      <footer className="absolute bottom-6 text-slate-600 text-xs font-mono">
-        © 2026 WAVY CORP.
-      </footer>
-    </main>
-  );
-}
-
-interface NavCardProps {
-  href: string;
-  icon: React.ReactNode;
-  title: string;
-  desc: string;
-  colorClass: string;
-  borderHover?: string;
-}
-
-function NavCard({ href, icon, title, desc, colorClass, borderHover }: NavCardProps) {
-  return (
-    <Link href={href} className="group w-full">
-      <div className={`
-        relative overflow-hidden
-        bg-slate-900/60 backdrop-blur-md 
-        border border-slate-800 
-        rounded-2xl p-5 h-28 md:h-32
-        flex items-center gap-5
-        transition-all duration-300 ease-out
-        hover:-translate-y-1 hover:shadow-2xl
-        ${borderHover || 'group-hover:border-slate-600'}
-      `}>
-        <div className={`
-          p-3 rounded-full bg-slate-950 border border-slate-800 
-          transition-colors duration-300
-          ${colorClass}
-        `}>
-          {icon}
-        </div>
-
-        <div className="flex flex-col">
-          <span className="text-lg md:text-xl font-bold text-slate-200 group-hover:text-white transition-colors">
-            {title}
-          </span>
-          <span className="text-xs md:text-sm text-slate-500 group-hover:text-slate-400 transition-colors">
-            {desc}
-          </span>
-        </div>
-
-        <div className="absolute right-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 text-slate-600">
-          ➔
+          {/* Legacy 섹션 - 저장된 페스티벌이 있을 때만 표시 */}
+          {currentFestival && (
+            <LegacySection
+              festivalId={currentFestival.id}
+              festivalName={currentFestival.name}
+              contents={legacyContents}
+            />
+          )}
         </div>
       </div>
-    </Link>
+    </div>
   );
 }
