@@ -23,10 +23,22 @@ export default function PerformanceCard({ data, isSelected, onToggle, style }: P
     onToggle();
   };
 
+  // 공연 시간 계산 (분 단위)
+  const start = new Date(data.startTime);
+  const end = new Date(data.endTime);
+  const durationMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
+  
+  // 최소 높이 설정: 짧은 공연(30분 이하)도 최소 36px 보장
+  const minHeight = durationMinutes <= 30 ? '36px' : undefined;
+
   return (
     <div
       onClick={handleClick}
-      style={{ ...style, minHeight: style?.height }}
+      style={{ 
+        ...style, 
+        minHeight: minHeight || style?.height,
+        height: style?.height 
+      }}
       className={`
         absolute w-full rounded border cursor-pointer transition-all duration-200 overflow-hidden group select-none
         
@@ -43,16 +55,16 @@ export default function PerformanceCard({ data, isSelected, onToggle, style }: P
     >
       <div className={`absolute left-0 top-0 bottom-0 w-[2px] transition-colors ${isSelected ? 'bg-white' : 'bg-blue-500'}`} />
 
-      <div className="pl-[6px] pr-1 py-0.5 md:py-1 h-full flex flex-col justify-center">
+      <div className="pl-[6px] pr-1 py-1 md:py-1.5 h-full flex flex-col justify-center min-w-0">
         
         {/* 아티스트 이름 */}
-        {/* ⚡ [수정 포인트 3] 텍스트 전체 표시(whitespace-normal)도 데스크탑 호버시에만 적용 */}
-        <h3 className="font-bold text-[10px] md:text-xs leading-tight mb-[1px] truncate md:group-hover:whitespace-normal md:group-hover:overflow-visible">
+        {/* ⚡ [수정] line-clamp-2로 최대 2줄까지 표시, break-words로 단어 단위 줄바꿈 */}
+        <h3 className="font-bold text-[10px] md:text-xs leading-tight mb-[1px] line-clamp-2 break-words md:group-hover:line-clamp-none md:group-hover:whitespace-normal">
           {data.artist.name}
         </h3>
         
         {/* 시간 표시 */}
-        <p className={`text-[8px] md:text-[10px] font-mono leading-none tracking-tight opacity-80 ${isSelected ? 'text-blue-100' : 'text-gray-400'}`}>
+        <p className={`text-[8px] md:text-[10px] font-mono leading-none tracking-tight opacity-80 flex-shrink-0 ${isSelected ? 'text-blue-100' : 'text-gray-400'}`}>
           {timeRange}
         </p>
       </div>

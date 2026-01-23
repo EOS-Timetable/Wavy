@@ -31,8 +31,8 @@ export async function middleware(request: NextRequest) {
 
   // --- [보호 로직 시작] ---
 
-  // 비로그인 유저 보호: 오직 '/'만 허용하고 나머지는 '/'로 리다이렉트
-  if (!user && pathname !== '/') {
+  // 비로그인 유저 보호: '/'와 '/onboarding'만 허용하고 나머지는 '/'로 리다이렉트
+  if (!user && pathname !== '/' && pathname !== '/onboarding') {
     const loginUrl = new URL('/', request.url)
     // 로그인이 필요한 페이지였다면, 로그인 후 돌아올 수 있게 쿼리 파라미터를 남길 수도 있습니다.
     // loginUrl.searchParams.set('redirectedFrom', pathname) 

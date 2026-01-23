@@ -108,7 +108,7 @@ export default async function CurrentPage({ searchParams }: PageProps) {
   const posts = await getPosts(filter);
 
   return (
-    <main className="w-full h-full relative bg-[#0a0e17] text-white">
+    <main className="w-full min-h-screen pb-20 relative bg-[#0a0e17] text-white">
       <CurrentView initialPosts={posts} activeFilter={filter} />
     </main>
   );

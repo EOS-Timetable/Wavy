@@ -112,6 +112,7 @@ export default function FestivalTimetablePage() {
       <TimetableTemplate
         festivalId={festivalId}
         onSelectionChange={handleSelectionChange}
+        backHref={`/festival/${festivalId}`}
         headerAction={
           <button 
             onClick={handleOpenSaveModal} 

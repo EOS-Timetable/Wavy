@@ -82,7 +82,7 @@ export default function DDayBanner({
   // 저장한 페스티벌이 없을 때
   if (savedFestivals.length === 0) {
     return (
-      <div className={withBottomMargin ? "px-4 mb-5" : "px-4"}>
+      <div className={withBottomMargin ? "mb-5" : ""}>
         {/* 정상 D-Day 배너와 동일한 카드 래퍼로 통일 */}
         <div className="relative bg-[#161b29]/80 backdrop-blur-sm border border-white/10 rounded-lg overflow-visible">
           <div className="relative p-6 text-center">
@@ -137,8 +137,8 @@ export default function DDayBanner({
     <div
       className={
         withBottomMargin
-          ? `px-4 mb-5 relative ${isDropdownOpen ? "z-[300]" : "z-0"}`
-          : `px-4 relative ${isDropdownOpen ? "z-[300]" : "z-0"}`
+          ? `mb-5 relative ${isDropdownOpen ? "z-[300]" : "z-0"}`
+          : `relative ${isDropdownOpen ? "z-[300]" : "z-0"}`
       }
     >
       <div

@@ -25,6 +25,7 @@ interface TimetableTemplateProps {
   headerAction?: React.ReactNode; // [공통] 헤더 우측 버튼 (저장 or 목록)
   subTitle?: string;
   onTitleClick?: () => void;
+  backHref?: string; // [공통] 뒤로가기 버튼 링크
 }
 
 export default function TimetableTemplate({ 
@@ -33,7 +34,8 @@ export default function TimetableTemplate({
   onSelectionChange,
   headerAction,
   subTitle,
-  onTitleClick
+  onTitleClick,
+  backHref
 }: TimetableTemplateProps) {
   
   // --- State 관리 ---
@@ -180,6 +182,7 @@ export default function TimetableTemplate({
           currentDay={currentDay}
           onSelectDay={setCurrentDay}
           headerAction={headerAction}
+          backHref={backHref}
         />
       </div>
 

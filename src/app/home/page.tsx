@@ -16,16 +16,10 @@ import ThisYearSection from "@/components/home/ThisYearSection";
 import LegacySection from "@/components/home/LegacySection";
 
 // 3. 유틸리티 및 데이터
-import { getExternalThumbnailUrl } from "@/utils/externalThumbnail";
-import { USE_MOCK_DATA } from "@/config/dataMode";
 import { getMyTimetables } from "@/utils/myTimetableFetcher";
+import { getExternalThumbnailUrl } from "@/utils/externalThumbnail";
+import { getFestivalContents } from "@/utils/dataFetcher";
 import { createClient } from "@/lib/supabase";
-import {
-  getFestivalKey,
-  MOCK_HOME_FESTIVALS,
-  MOCK_LEGACY_CONTENTS,
-  MOCK_THIS_YEAR_CONTENTS,
-} from "@/data/homeMockContents";
 
 interface SavedFestival {
   id: string;
@@ -42,16 +36,13 @@ export default function HomePage() {
   const router = useRouter();
 
   const [selectedFestivalId, setSelectedFestivalId] = useState<string | undefined>();
-  const [thumbnailCache] = useState<Record<string, string>>({});
   const [savedFestivalsDb, setSavedFestivalsDb] = useState<SavedFestival[]>([]);
-  const [dataLoading, setDataLoading] = useState(!USE_MOCK_DATA);
+  const [dataLoading, setDataLoading] = useState(true);
+  const [thisYearContents, setThisYearContents] = useState<any[]>([]);
+  const [legacyContents, setLegacyContents] = useState<any[]>([]);
 
-  // ✅ 목업/DB 모드 스위치
-  const savedFestivals: SavedFestival[] = USE_MOCK_DATA ? MOCK_HOME_FESTIVALS : savedFestivalsDb;
-
-  // DB 모드일 때만: 저장된 타임테이블 기반으로 페스티벌 목록 로드
+  // 저장된 타임테이블 기반으로 페스티벌 목록 로드
   useEffect(() => {
-    if (USE_MOCK_DATA) return;
     if (!user?.id) {
       if (!authLoading) setDataLoading(false);
       return;
@@ -140,7 +131,7 @@ export default function HomePage() {
 
   // 선택된 페스티벌 또는 가장 임박한 페스티벌
   const currentFestival = useMemo(() => {
-    if (savedFestivals.length === 0) return null;
+    if (savedFestivalsDb.length === 0) return null;
     
     // selectedFestivalId가 명시적으로 설정되어 있으면 (null이어도) 그것을 찾음
     if (selectedFestivalId !== undefined) {
@@ -148,36 +139,61 @@ export default function HomePage() {
       if (selectedFestivalId === null) return null;
       
       // 선택된 페스티벌 찾기
-      const found = savedFestivals.find((f) => f.id === selectedFestivalId);
+      const found = savedFestivalsDb.find((f) => f.id === selectedFestivalId);
       if (found) return found;
       // 찾을 수 없으면 null 반환 (명시적으로 선택했는데 없으면)
       return null;
     }
     // selectedFestivalId가 undefined면 아직 선택 안 한 상태 → 가장 임박한 페스티벌 사용
-    return savedFestivals[0];
-  }, [savedFestivals, selectedFestivalId]);
+    return savedFestivalsDb[0];
+  }, [savedFestivalsDb, selectedFestivalId]);
 
-  // This Year와 Legacy 콘텐츠 가져오기 (목업 데이터)
-  const { thisYearContents, legacyContents } = useMemo(() => {
-    const festivalKey = currentFestival ? getFestivalKey(currentFestival.name) : null;
-    const thisYear = festivalKey && MOCK_THIS_YEAR_CONTENTS[festivalKey]
-      ? MOCK_THIS_YEAR_CONTENTS[festivalKey].map((item) => ({
-          ...item,
-          imageUrl:
-            thumbnailCache[item.linkUrl] ||
-            item.imageUrl ||
-            getExternalThumbnailUrl(item.linkUrl),
-        }))
-      : [];
-    const legacy = festivalKey && MOCK_LEGACY_CONTENTS[festivalKey]
-      ? MOCK_LEGACY_CONTENTS[festivalKey].map((item: any) => ({
-          ...item,
-          thumbnailUrl: item.thumbnailUrl || getExternalThumbnailUrl(item.linkUrl),
-        }))
-      : [];
-    return { thisYearContents: thisYear, legacyContents: legacy };
-  }, [currentFestival, thumbnailCache]);
+  // ThisYear와 Legacy 콘텐츠 가져오기 (DB에서)
+  useEffect(() => {
+    if (!currentFestival) {
+      setThisYearContents([]);
+      setLegacyContents([]);
+      return;
+    }
 
+    async function loadContents() {
+      if (!currentFestival) return;
+      
+      try {
+        const [thisYear, legacy] = await Promise.all([
+          getFestivalContents(currentFestival.id, "this_year"),
+          getFestivalContents(currentFestival.id, "legacy"),
+        ]);
+
+        // 이미지 URL 처리 (YouTube 등 외부 썸네일)
+        const thisYearWithThumbnails = thisYear.map((item) => ({
+          ...item,
+          imageUrl: item.imageUrl || getExternalThumbnailUrl(item.linkUrl),
+        }));
+
+        const legacyWithThumbnails = legacy.map((item) => ({
+          ...item,
+          thumbnailUrl: item.thumbnailUrl || getExternalThumbnailUrl(item.linkUrl || ""),
+        }));
+
+        setThisYearContents(thisYearWithThumbnails);
+        setLegacyContents(legacyWithThumbnails);
+      } catch (error) {
+        console.error("Error loading festival contents:", error);
+        setThisYearContents([]);
+        setLegacyContents([]);
+      }
+    }
+
+    loadContents();
+  }, [currentFestival]);
+
+  // 비로그인 상태 - 랜딩 페이지로 리다이렉트
+  useEffect(() => {
+    if (!user && !authLoading) {
+      router.push('/');
+    }
+  }, [user, authLoading, router]);
 
   // 로딩 화면
   if (authLoading && !user) {
@@ -192,9 +208,8 @@ export default function HomePage() {
     );
   }
 
-  // 비로그인 상태
   if (!user) {
-    console.log('[HomePage] Rendering unauthenticated state');
+    console.log('[HomePage] Redirecting to landing page');
     return (
       <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
         <p className="text-slate-400">Redirecting to login...</p>
@@ -207,16 +222,16 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white pb-20">
-      <div className="max-w-5xl mx-auto px-4">
+      <div className="max-w-5xl mx-auto px-4 pt-8">
         {/* 🚀 통합된 반응형 헤더 (인사말 + 프로필 + 로그아웃) */}
         <HomeHeader 
           userName={profile?.nickname || user.email?.split('@')[0] || "재빈"} 
           avatarUrl={profile?.avatar_url}
         />
         {/* D-Day / ThisYear / Legacy 섹션 간격 통일 */}
-        <div className="space-y-5">
+        <div className="space-y-4">
           <DDayBanner
-            savedFestivals={savedFestivals}
+            savedFestivals={savedFestivalsDb}
             selectedFestivalId={selectedFestivalId}
             onFestivalChange={setSelectedFestivalId}
             withBottomMargin={false}
@@ -228,6 +243,7 @@ export default function HomePage() {
               festivalId={currentFestival.id}
               festivalName={currentFestival.name}
               contents={thisYearContents}
+              withPagePadding={false}
             />
           )}
 
@@ -237,6 +253,7 @@ export default function HomePage() {
               festivalId={currentFestival.id}
               festivalName={currentFestival.name}
               contents={legacyContents}
+              withPagePadding={false}
             />
           )}
         </div>

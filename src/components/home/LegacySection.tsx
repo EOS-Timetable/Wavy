@@ -46,7 +46,7 @@ export default function LegacySection({
 
   return (
     <section className={festivalId ? "" : "mb-8"}>
-      <div className={withPagePadding ? "px-4" : "px-0"}>
+      <div className={withPagePadding ? "px-4" : ""}>
         <div className="bg-[#161b29]/80 backdrop-blur-sm border border-white/10 rounded-lg p-3.5">
         {/* 섹션 헤더 */}
         <div className="flex items-center gap-2 mb-2.5">

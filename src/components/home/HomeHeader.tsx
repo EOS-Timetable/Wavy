@@ -11,7 +11,7 @@ interface HomeHeaderProps {
 
 export default function HomeHeader({ userName, avatarUrl }: HomeHeaderProps) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-6 md:py-8 border-b border-white/5 mb-6 md:mb-8">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-4 md:py-6 border-b border-white/5 mb-3 md:mb-4">
       {/* 1. 인사말 영역: 훨씬 담백하고 세련된 문구 */}
       <div className="flex flex-col gap-1">
         <h1 className="text-xl md:text-2xl font-bold tracking-tight text-white">
