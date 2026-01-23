@@ -31,8 +31,8 @@ export async function middleware(request: NextRequest) {
 
   // --- [보호 로직 시작] ---
 
-  // 비로그인 유저 보호: '/'와 '/onboarding'만 허용하고 나머지는 '/'로 리다이렉트
-  if (!user && pathname !== '/' && pathname !== '/onboarding') {
+  // 비로그인 유저 보호: 오직 '/'만 허용하고 나머지는 '/'로 리다이렉트 (onboarding 허용)
+  if (pathname !== '/onboarding' && pathname !== '/fbti' && !user && pathname !== '/') {
     const loginUrl = new URL('/', request.url)
     // 로그인이 필요한 페이지였다면, 로그인 후 돌아올 수 있게 쿼리 파라미터를 남길 수도 있습니다.
     // loginUrl.searchParams.set('redirectedFrom', pathname) 
@@ -42,6 +42,14 @@ export async function middleware(request: NextRequest) {
   // 로그인 유저 보호: 로그인 상태에서 '/' 접근 시 '/home'으로 강제 이동
   if (user && pathname === '/') {
     return NextResponse.redirect(new URL('/home', request.url))
+  }
+  if (request.nextUrl.pathname.startsWith('/admin')) {
+    const { data: { user } } = await supabase.auth.getUser();
+    const ADMIN_EMAILS = ['snakes0625@gmail.com']; // 혹은 DB role 확인
+
+    if (!user || !ADMIN_EMAILS.includes(user.email!)) {
+      return NextResponse.redirect(new URL('/', request.url));
+    }
   }
 
   return response

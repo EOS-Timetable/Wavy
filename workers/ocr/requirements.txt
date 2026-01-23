@@ -1,0 +1,6 @@
+easyocr
+opencv-python-headless
+numpy
+supabase
+python-dotenv
+requests
