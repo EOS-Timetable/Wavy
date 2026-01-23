@@ -39,7 +39,7 @@ export default function LookupHeader({
   onExcludeEndedChange,
 }: LookupHeaderProps) {
   return (
-    <div className="px-4 pt-12 pb-6">
+    <div className="px-4 pt-8 pb-6">
       {/* 웹 환경: 헤더와 검색 필드를 같은 컨테이너로 감싸서 검색 필드 중앙, 헤더는 왼쪽 끝에 배치 */}
       <div className="max-w-5xl mx-auto">
         {/* 타이틀 - home과 동일한 스타일 */}

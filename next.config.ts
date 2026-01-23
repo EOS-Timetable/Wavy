@@ -29,6 +29,14 @@ const config: NextConfig = {
         protocol: "https",
         hostname: "img.youtube.com", // YouTube thumbnails
       },
+      {
+        protocol: "https",
+        hostname: "jab.meloveyou.co.kr", // Festival poster images
+      },
+      {
+        protocol: "https",
+        hostname: "tkfile.yes24.com", // YES24 ticket images
+      },
     ],
   },
 };

@@ -72,8 +72,8 @@ export default function TimetableFab({ onMakeWallpaper, onMakePlaylist }: Timeta
         className={`
           pointer-events-auto
           flex items-center justify-center w-14 h-14 rounded-full shadow-xl 
-          bg-gradient-to-tr from-blue-600 to-purple-600 text-white
-          hover:shadow-2xl hover:scale-105 active:scale-95 transition-all duration-300
+          bg-gradient-to-r from-blue-600/30 to-cyan-600/30 border border-blue-500/40 text-white
+          hover:from-blue-600/40 hover:to-cyan-600/40 hover:shadow-2xl hover:scale-105 active:scale-95 transition-all duration-300
           focus:outline-none ring-4 ring-white/10
         `}
       >

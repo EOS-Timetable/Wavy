@@ -6,8 +6,6 @@ import { ChevronRight, Music, X } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Artist } from "@/utils/dataFetcher";
 import { createPortal } from "react-dom";
-import { USE_MOCK_DATA } from "@/config/dataMode";
-import { getAllMockArtists } from "@/utils/mockDataFetcher";
 
 interface LineupSectionProps {
   artists: Artist[];
@@ -20,16 +18,7 @@ export default function LineupSection({ artists }: LineupSectionProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleArtistClick = (artist: Artist) => {
-    // 목업 모드에서는 mock artist id(숫자)를 라우팅에 사용해야 함
-    if (USE_MOCK_DATA) {
-      const mock = getAllMockArtists().find((a) => a.name === artist.name);
-      if (mock) {
-        router.push(`/artist/${mock.id}`);
-        return;
-      }
-      // 못 찾으면 fallback으로 uuid로 이동 (페이지에서 "없음" 뜰 수 있음)
-    }
-
+    // DB에서 가져온 UUID를 사용하여 아티스트 페이지로 이동
     router.push(`/artist/${artist.id}`);
   };
 

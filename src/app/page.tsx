@@ -1,18 +1,33 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from "next/link";
 import Image from "next/image";
-import { Search } from 'lucide-react';
 import { signInWithSocial } from "@/utils/authActions";
 
 export default function LandingPage() {
+  const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [scrollY, setScrollY] = useState(0);
   const mouse = useRef({ x: 0, y: 0 });
   const [isMobile, setIsMobile] = useState(false); // 모바일 상태 관리 추가
+  const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(true);
+
+  // 온보딩 완료 여부 체크
+  useEffect(() => {
+    const onboardingCompleted = localStorage.getItem('wavy_onboarding_completed');
+    if (!onboardingCompleted) {
+      router.push('/onboarding');
+    } else {
+      setIsCheckingOnboarding(false);
+    }
+  }, [router]);
 
   useEffect(() => {
+    // 온보딩 체크 중이면 이벤트 리스너 등록 안 함
+    if (isCheckingOnboarding) return;
+
     const handleScroll = () => setScrollY(window.scrollY);
     const handleMouseMove = (e: MouseEvent) => {
       mouse.current = { x: e.clientX, y: e.clientY };
@@ -32,9 +47,12 @@ export default function LandingPage() {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('resize', handleResize);
     };
-  }, []);
+  }, [isCheckingOnboarding]);
 
   useEffect(() => {
+    // 온보딩 체크 중이면 캔버스 초기화 안 함
+    if (isCheckingOnboarding) return;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -127,7 +145,19 @@ export default function LandingPage() {
       cancelAnimationFrame(animationId);
       window.removeEventListener('resize', setCanvasSize);
     };
-  }, [isMobile]); // isMobile 변경 시 애니메이션 재설정
+  }, [isMobile, isCheckingOnboarding]); // isMobile 변경 시 애니메이션 재설정
+
+  // 온보딩 체크 중이면 로딩 화면 표시
+  if (isCheckingOnboarding) {
+    return (
+      <div className="min-h-screen bg-[#020305] flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-500 mb-4"></div>
+          <p className="text-gray-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-screen bg-[#020305] overflow-hidden font-sans text-white selection:bg-[#00f2ff] selection:text-black">
@@ -188,36 +218,64 @@ export default function LandingPage() {
               음악과 사람이 연결되는 새로운 물결
             </p>
           </div>
-          <div className="w-full max-w-sm space-y-4">
+          <div className="w-full max-w-sm space-y-3 mt-8 md:mt-12">
 
           {/* 카카오 로그인 */}
           <button 
             onClick={() => signInWithSocial('kakao')}
-            className="mt-4 px-6 py-2 bg-white text-black rounded-full font-bold hover:bg-gray-200 transition-all"
+            className="w-full flex items-center transition-all hover:opacity-90 active:scale-[0.98] relative"
+            style={{ 
+              borderRadius: '12px',
+              height: '50px',
+              backgroundColor: '#FEE500',
+              padding: '0 12px'
+            }}
           >
-            kakao로 테스트 로그인
+            {/* 카카오 심볼 */}
+            <Image
+              src="/images/카카오 로고.png"
+              alt="카카오"
+              width={20}
+              height={20}
+              className="object-contain"
+              style={{ flexShrink: 0, marginRight: '12px' }}
+              priority
+            />
+            {/* 카카오 로그인 레이블 - 중앙 정렬 */}
+            <span 
+              className="font-medium absolute left-1/2 -translate-x-1/2"
+              style={{ 
+                color: 'rgba(0, 0, 0, 0.85)',
+                fontSize: '14px',
+                letterSpacing: '0.25px'
+              }}
+            >
+              카카오 로그인
+            </span>
           </button>
 
           {/* 구글 로그인 */}
           <button 
             onClick={() => signInWithSocial('google')}
-            className="mt-4 px-6 py-2 bg-white text-black rounded-full font-bold hover:bg-gray-200 transition-all"
+            className="gsi-material-button w-full"
+            style={{ height: '50px' }}
           >
-            Google로 테스트 로그인
+            <div className="gsi-material-button-state"></div>
+            <div className="gsi-material-button-content-wrapper">
+              <div className="gsi-material-button-icon">
+                <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" xmlnsXlink="http://www.w3.org/1999/xlink" style={{ display: 'block' }}>
+                  <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
+                  <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
+                  <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
+                  <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
+                  <path fill="none" d="M0 0h48v48H0z"></path>
+                </svg>
+              </div>
+              <span className="gsi-material-button-contents">Sign in with Google</span>
+              <span style={{ display: 'none' }}>Sign in with Google</span>
+            </div>
           </button>
         </div>
-          
-          {/* CTA Button */}
-          <Link
-            href="/home"
-            className="group relative inline-flex items-center gap-3 px-10 py-4 md:px-12 md:py-5 rounded-full bg-[#7000ff]/20 border border-white/20 backdrop-blur-md overflow-hidden transition-all duration-300 hover:bg-[#7000ff]/40 hover:border-white/50 hover:scale-105 hover:shadow-[0_0_40px_rgba(112,0,255,0.5)]"
-          >
-            <span className="relative z-10 font-bold text-base md:text-lg tracking-wide text-white">
-              Dive In
-            </span>
-            <Search className="relative z-10 w-5 h-5 text-white transition-transform group-hover:rotate-12" />
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
-          </Link>
 
           {/* Tags */}
           <div className="mt-6 md:mt-12 flex flex-wrap gap-1 md:gap-5 justify-center">

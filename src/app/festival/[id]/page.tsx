@@ -1,4 +1,5 @@
-import { getFestival, getFestivalArtists } from "@/utils/dataFetcher";
+import { getFestival, getFestivalArtists, getFestivalContents } from "@/utils/dataFetcher";
+import { getExternalThumbnailUrl } from "@/utils/externalThumbnail";
 import FestivalHeader from "@/components/festival/FestivalHeader";
 import FestivalSaveButton from "@/components/festival/FestivalSaveButton";
 import LineupSection from "@/components/festival/LineupSection";
@@ -8,11 +9,6 @@ import TimetableButton from "@/components/festival/TimetableButton";
 import Header from "@/components/ui/Header";
 import ThisYearSection from "@/components/home/ThisYearSection";
 import LegacySection from "@/components/home/LegacySection";
-import {
-  getFestivalKey,
-  MOCK_LEGACY_CONTENTS,
-  MOCK_THIS_YEAR_CONTENTS,
-} from "@/data/homeMockContents";
 import Image from "next/image";
 
 interface PageProps {
@@ -81,10 +77,22 @@ export default async function FestivalDetailPage({ params }: PageProps) {
   //   festival.officialLinks?.instagram ||
   //   "#";
 
-  // Home과 동일한 목업 데이터(인스타 링크 포함)로 테스트
-  const festivalKey = getFestivalKey(festival.name);
-  const thisYearContents = festivalKey ? MOCK_THIS_YEAR_CONTENTS[festivalKey] : [];
-  const legacyContents = festivalKey ? MOCK_LEGACY_CONTENTS[festivalKey] : [];
+  // This Year와 Legacy 콘텐츠를 DB에서 가져오기
+  const [thisYearData, legacyData] = await Promise.all([
+    getFestivalContents(id, "this_year"),
+    getFestivalContents(id, "legacy"),
+  ]);
+
+  // 이미지 URL 처리 (YouTube 등 외부 썸네일)
+  const thisYearContents = thisYearData.map((item) => ({
+    ...item,
+    imageUrl: item.imageUrl || getExternalThumbnailUrl(item.linkUrl),
+  }));
+
+  const legacyContents = legacyData.map((item) => ({
+    ...item,
+    thumbnailUrl: item.thumbnailUrl || getExternalThumbnailUrl(item.linkUrl || ""),
+  }));
 
   return (
     <div className="min-h-screen bg-slate-950 text-white overflow-x-hidden pb-20">
@@ -140,21 +148,21 @@ export default async function FestivalDetailPage({ params }: PageProps) {
               formatDate={formatDate}
             />
           </div>
-        </div>
 
-        {/* This Year & Legacy 섹션 */}
-        <ThisYearSection
-          festivalId={id}
-          festivalName={festival.name}
-          contents={thisYearContents}
-          withPagePadding={false}
-        />
-        <LegacySection
-          festivalId={id}
-          festivalName={festival.name}
-          contents={legacyContents}
-          withPagePadding={false}
-        />
+          {/* This Year & Legacy 섹션 */}
+          <ThisYearSection
+            festivalId={id}
+            festivalName={festival.name}
+            contents={thisYearContents}
+            withPagePadding={false}
+          />
+          <LegacySection
+            festivalId={id}
+            festivalName={festival.name}
+            contents={legacyContents}
+            withPagePadding={false}
+          />
+        </div>
       </div>
     </div>
   );

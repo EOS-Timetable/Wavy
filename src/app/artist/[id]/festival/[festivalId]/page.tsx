@@ -1,12 +1,5 @@
 import { createClient } from "@/lib/supabase";
-import { getArtistById, getFestival } from "@/utils/dataFetcher";
-import { USE_MOCK_DATA } from "@/config/dataMode";
-import {
-  getMockArtist,
-  getMockFestival,
-  getMockArtistFestivalVideos,
-  getMockArtistFestivalSetlist,
-} from "@/utils/mockDataFetcher";
+import { getArtistById, getFestival, getSetlistTrackIds } from "@/utils/dataFetcher";
 import ArtistHeader from "@/components/artist/ArtistHeader";
 import ArtistImage from "@/components/artist/ArtistImage";
 import FestivalInfo from "@/components/artist/FestivalInfo";
@@ -22,8 +15,8 @@ const supabase = createClient();
 export default async function ArtistFestivalPage({ params }: PageProps) {
   const { id: artistId, festivalId } = await params;
 
-  const artist = USE_MOCK_DATA ? getMockArtist(artistId) : await getArtistById(artistId);
-  const festival = USE_MOCK_DATA ? getMockFestival(festivalId) : await getFestival(festivalId);
+  const artist = await getArtistById(artistId);
+  const festival = await getFestival(festivalId);
 
   if (!artist || !festival) {
     return (
@@ -42,35 +35,22 @@ export default async function ArtistFestivalPage({ params }: PageProps) {
     )}. ${String(date.getDate()).padStart(2, "0")}`;
   };
 
-  const performanceVideos = USE_MOCK_DATA
-    ? getMockArtistFestivalVideos(artistId, festivalId)
-    : (
-        (
-          await supabase
-            .from("performance_videos")
-            .select("id, title, video_url, thumbnail_url")
-            .eq("artist_id", artistId)
-            .eq("festival_id", festivalId)
-        ).data?.map((v: any) => ({
-          id: v.id,
-          title: v.title,
-          videoUrl: v.video_url,
-          thumbnailUrl: v.thumbnail_url,
-        })) ?? []
-      );
+  const performanceVideos = (
+    (
+      await supabase
+        .from("performance_videos")
+        .select("id, title, video_url, thumbnail_url")
+        .eq("artist_id", artistId)
+        .eq("festival_id", festivalId)
+    ).data?.map((v: any) => ({
+      id: v.id,
+      title: v.title,
+      videoUrl: v.video_url,
+      thumbnailUrl: v.thumbnail_url,
+    })) ?? []
+  );
 
-  const setlistTrackIds: string[] = USE_MOCK_DATA
-    ? getMockArtistFestivalSetlist(artistId, festivalId)?.trackIds || []
-    : (
-        (
-          await supabase
-            .from("setlists")
-            .select("tracks")
-            .eq("artist_id", artistId)
-            .eq("festival_id", festivalId)
-            .maybeSingle()
-        ).data?.tracks?.map((t: any) => t.spotify_id).filter(Boolean) ?? []
-      );
+  const setlistTrackIds = await getSetlistTrackIds(artistId, festivalId);
 
   // 페스티벌 포스터 URL (페스티벌 ID에서 가져오기)
   const festivalPosterUrl =

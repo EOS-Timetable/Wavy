@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import TimetableTemplate from "@/components/timetable/TimetableTemplate";
-import { List, Loader2, Save, RotateCcw, X, Trash2, CheckCircle, GripVertical } from "lucide-react"; 
+import { List, Loader2, Save, RotateCcw, X, Trash2, CheckCircle, GripVertical, Calendar, Search } from "lucide-react"; 
 import Link from "next/link";
 
 import {
@@ -764,22 +764,24 @@ export default function MyTimetablePage() {
         {/* 2. 로딩 끝났는데 데이터가 없을 때 (빈 화면) 표시 */}
         {!loading && !currentTimetable && (
         <div className="fixed inset-0 flex flex-col items-center justify-center bg-slate-950 text-white p-6 z-40">
-            <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mb-4">
-            <List size={32} className="text-slate-400" />
+            <div className="relative bg-[#161b29]/80 backdrop-blur-sm border border-white/10 rounded-lg overflow-visible max-w-md w-full">
+                <div className="relative p-6 text-center">
+                    <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-bold text-white mb-2">
+                        저장한 시간표가 없습니다
+                    </h3>
+                    <p className="text-sm text-gray-400 mb-4">
+                        새로운 시간표를 만들어보세요!
+                    </p>
+                    <Link
+                        href="/lookup"
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600/20 to-cyan-600/20 border border-blue-500/30 text-white rounded-lg font-semibold hover:from-blue-600/30 hover:to-cyan-600/30 transition-all"
+                    >
+                        <Search className="w-4 h-4 text-blue-300" />
+                        페스티벌 찾아보기
+                    </Link>
+                </div>
             </div>
-            <h2 className="text-xl font-bold mb-2">저장된 시간표가 없어요</h2>
-            <p className="text-slate-400 text-center mb-6 max-w-xs">
-            아직 생성된 시간표가 없습니다.<br/>
-            새로운 시간표를 만들어보세요!
-            </p>
-            
-            {/* 메인으로 돌아가는 버튼이나, 새 시간표 만들기 버튼 등 연결 */}
-            <Link 
-                href="/" 
-                className="bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-bold py-3 px-6 rounded-xl transition-all shadow-lg shadow-cyan-500/20"
-            >
-                홈으로 가기
-            </Link>
         </div>
         )}
 

@@ -7,8 +7,8 @@ import { Home, Search, Calendar, Zap, BookOpen } from "lucide-react";
 export default function Navbar() {
   const pathname = usePathname();
 
-  // 랜딩 페이지에서는 네비게이션 바 숨기기
-  if (pathname === "/") {
+  // 랜딩 페이지와 온보딩 페이지에서는 네비게이션 바 숨기기
+  if (pathname === "/" || pathname === "/onboarding") {
     return null;
   }
 

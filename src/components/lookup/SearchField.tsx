@@ -70,8 +70,18 @@ export default function SearchField({
       .filter((artist) => artist.name.toLowerCase().includes(query))
       .map((a) => ({ ...a, type: "artist" as const }));
 
+    // 디버깅: 매칭된 아티스트 로그
+    if (matchedArtists.length > 0) {
+      console.log(`[SearchField] Matched artists for "${query}":`, matchedArtists.map(a => ({ id: a.id, name: a.name })));
+      console.log(`[SearchField] Total matched artists: ${matchedArtists.length}, Total matched festivals: ${matchedFestivals.length}`);
+    }
+
     // 페스티벌과 아티스트를 합쳐서 최대 5개 반환
-    return [...matchedFestivals, ...matchedArtists].slice(0, 5);
+    const allSuggestions = [...matchedFestivals, ...matchedArtists];
+    console.log(`[SearchField] Total suggestions before slice: ${allSuggestions.length}`);
+    const result = allSuggestions.slice(0, 5);
+    console.log(`[SearchField] Final suggestions count: ${result.length}`);
+    return result;
   }, [searchQuery, festivals, artists]);
 
   // 외부 클릭 시 자동완성 닫기
@@ -147,17 +157,27 @@ export default function SearchField({
       await saveSearchHistory(user.id, query);
     }
 
+    // 디버깅: 전체 아티스트 목록 확인
+    console.log(`[SearchField] handleSearch - query: "${query}"`);
+    console.log(`[SearchField] Total artists available:`, artists.length);
+    console.log(`[SearchField] Sample artists:`, artists.slice(0, 3).map(a => ({ id: a.id, name: a.name })));
+
     // 1. 정확히 일치하는 아티스트 찾기
     const exactArtistMatch = artists.find(
       (artist) => artist.name.toLowerCase() === queryLower
     );
 
     if (exactArtistMatch) {
+      console.log(`[SearchField] Exact artist match found:`, { id: exactArtistMatch.id, name: exactArtistMatch.name });
+      console.log(`[SearchField] Navigating to: /artist/${exactArtistMatch.id}`);
       // 아티스트 페이지로 이동
       router.push(`/artist/${exactArtistMatch.id}`);
       setShowSuggestions(false);
       setShowRecentSearches(false);
       return;
+    } else {
+      console.log(`[SearchField] No exact match found for "${query}"`);
+      console.log(`[SearchField] All artist names:`, artists.map(a => a.name));
     }
 
     // 2. 정확히 일치하는 페스티벌 찾기
@@ -234,9 +254,15 @@ export default function SearchField({
                 <Link
                   key={`artist-${item.id}`}
                   href={`/artist/${item.id}`}
-                  onClick={() => {
+                  onClick={async () => {
+                    console.log(`[SearchField] Artist clicked from suggestions:`, { id: item.id, name: item.name });
                     setSearchQuery(item.name);
                     setShowSuggestions(false);
+                    
+                    // 검색 기록 저장
+                    if (user?.id) {
+                      await saveSearchHistory(user.id, item.name);
+                    }
                   }}
                   className="w-full px-4 py-3 text-left text-white hover:bg-white/10 transition-colors border-b border-white/5 last:border-b-0 flex items-center gap-2"
                 >

@@ -1,6 +1,8 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
+import { ChevronLeft } from 'lucide-react';
 import DaySelector from './DaySelector';
 
 interface TimetableHeaderProps {
@@ -10,7 +12,8 @@ interface TimetableHeaderProps {
   days: string[];
   currentDay: number;
   onSelectDay: (dayNum: number) => void;
-  headerAction?: React.ReactNode; 
+  headerAction?: React.ReactNode;
+  backHref?: string;
 }
 
 export default function TimetableHeader({ 
@@ -20,23 +23,36 @@ export default function TimetableHeader({
   days, 
   currentDay, 
   onSelectDay,
-  headerAction 
+  headerAction,
+  backHref
 }: TimetableHeaderProps) {
   
   const isInteractive = !!onTitleClick;
 
   return (
     <header className="bg-slate-950 border-b border-white/10 w-full z-50 relative shadow-md">
-      <div className="max-w-7xl mx-auto px-4 py-3 md:px-6 md:pt-6 md:pb-4 flex flex-col gap-4">
+      <div className="max-w-7xl mx-auto px-4 pt-8 pb-4 md:px-6 flex flex-col gap-4">
         
         {/* 상단 행 */}
         <div className="flex justify-between items-start w-full gap-3 md:gap-4">
           
-          {/* [좌측] 제목 영역 컨테이너
-              - flex-1: 남은 공간을 모두 차지하려고 시도함
-              - min-w-0: 내용이 넘치면 줄어들 수 있게 허용
-          */}
-          <div className="flex flex-col items-start flex-1 min-w-0 mr-auto">
+          {/* [좌측] 뒤로가기 버튼 + 제목 영역 */}
+          <div className="flex items-start gap-3 flex-1 min-w-0">
+            {/* 뒤로가기 버튼 */}
+            {backHref && (
+              <Link
+                href={backHref}
+                className="inline-flex items-center justify-center p-2 hover:bg-white/10 rounded-lg transition-colors flex-shrink-0 mt-0.5"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </Link>
+            )}
+            
+            {/* 제목 영역 컨테이너
+                - flex-1: 남은 공간을 모두 차지하려고 시도함
+                - min-w-0: 내용이 넘치면 줄어들 수 있게 허용
+            */}
+            <div className="flex flex-col items-start flex-1 min-w-0">
             
             <div 
               onClick={isInteractive ? onTitleClick : undefined}
@@ -74,6 +90,7 @@ export default function TimetableHeader({
             ">
               {title}
             </p>
+            </div>
           </div>
 
           {/* [우측] 버튼 영역 (절대 줄어들지 않음) */}
