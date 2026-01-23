@@ -53,6 +53,7 @@ export default function ArtistInfoSection({
     if (!user?.id) return;
 
     async function checkFollowStatus() {
+      if (!user) return;
       const followed = await isArtistFollowed(user.id, artistId);
       setIsStarred(followed);
     }
