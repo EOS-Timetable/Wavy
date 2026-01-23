@@ -2,7 +2,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Post } from "@/app/current/page"; // page.tsx에서 정의한 타입 import (혹은 types.ts)
+import { Post } from "@/types";
 import SmartFilter from "./layout/SmartFilter";
 import PostCard from "./feed/PostCard";
 import { PenSquare } from "lucide-react"; // 아이콘 라이브러리
