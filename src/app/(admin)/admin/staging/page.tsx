@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Filter, Clock, AlertCircle, CheckCircle, XCircle, Zap } from 'lucide-react';
 import { createClient } from '@/lib/supabase';
+import StagingPreview from '@/components/admin/StagingPreview';
 
 type StagingStatus = 'PENDING' | 'ALLOWED' | 'REJECTED';
 type SortField = 'created_at' | 'updated_at' | 'last_crawled_at';
@@ -525,23 +526,20 @@ export default function StagingPage() {
                   </div>
 
                   {/* 우측: 프리뷰 */}
-                  <div className="bg-gray-50 rounded-xl p-4">
-                    <div className="text-xs text-gray-500 mb-3">미리보기</div>
-                    <div className="bg-white rounded-lg p-4 shadow-sm">
-                      <div className="aspect-video bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg mb-3 flex items-center justify-center text-white font-bold text-sm">
-                        포스터 이미지
-                      </div>
-                      <h4 className="font-bold text-lg mb-2">
-                        {content.raw_data?.title || content.raw_data?.name || '제목 없음'}
-                      </h4>
-                      <p className="text-sm text-gray-600 mb-2 line-clamp-2">
-                        {content.raw_data?.description || content.raw_data?.content || '설명 없음'}
-                      </p>
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        {content.raw_data?.date && <span>{content.raw_data.date}</span>}
-                        {content.raw_data?.date && content.raw_data?.location && <span>•</span>}
-                        {content.raw_data?.location && <span>{content.raw_data.location}</span>}
-                      </div>
+                  <div className="bg-gray-50 rounded-xl p-4 h-full">
+                    <div className="text-xs text-gray-500 mb-3 flex justify-between items-center">
+                      <span>실제 컴포넌트 미리보기</span>
+                      <span className="bg-gray-200 text-gray-600 px-2 py-0.5 rounded text-[10px]">
+                        {content.category}
+                      </span>
+                    </div>
+                    
+                    {/* StagingPreview 컴포넌트 주입 */}
+                    <div className="bg-black rounded-lg overflow-hidden min-h-[200px] flex flex-col justify-center">
+                        <StagingPreview 
+                            category={content.category} 
+                            rawData={content.raw_data} 
+                        />
                     </div>
                   </div>
                 </div>

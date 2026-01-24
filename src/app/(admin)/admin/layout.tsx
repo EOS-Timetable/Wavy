@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import "@/app/globals.css";
-import Navbar from "@/components/layout/Navbar";
 
 // 1. 뷰포트 설정 (모바일 최적화)
 export const viewport: Viewport = {
