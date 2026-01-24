@@ -1,32 +1,15 @@
-// src/app/current/page.tsx
+// src/app/(main)/current/page.tsx
 
 import CurrentView from "@/components/current/CurrentView";
+import { Post, PostType } from "@/types"; // [수정] 타입 import 추가
 
 // ----------------------------------------------------------------------
-// 1. 타입 정의 (나중에 src/types/post.ts 등으로 분리 추천)
+// 1. 타입 정의 (src/types/index.ts로 이동함)
 // ----------------------------------------------------------------------
-
-export type PostType = "TUBE" | "RIPPLE" | "PIECE";
-
-export interface Post {
-  id: string;
-  type: PostType;
-  festivalId: string;
-  festivalName: string;
-  festivalColor: string; // Tailwind class (ex: text-yellow-400) or Hex
-  content: string;
-  image?: string; // PIECE 타입용
-  createdAt: string; // ISO String or "방금 전"
-  user: {
-    id: string;
-    name: string;
-    avatar?: string;
-  };
-  tubeStatus?: "OPEN" | "CLOSED"; // TUBE 타입용
-}
+// (기존 타입 정의 삭제됨)
 
 // ----------------------------------------------------------------------
-// 2. Mock Data & Fetching 함수 (나중에 DB 호출로 교체)
+// 2. Mock Data & Fetching 함수
 // ----------------------------------------------------------------------
 
 const MOCK_POSTS: Post[] = [
@@ -93,18 +76,12 @@ async function getPosts(filter: string): Promise<Post[]> {
 // ----------------------------------------------------------------------
 
 interface PageProps {
-  // Next.js 15+ 에서는 searchParams가 Promise입니다!
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
 export default async function CurrentPage({ searchParams }: PageProps) {
-  // 1. await로 값을 먼저 꺼냅니다.
   const resolvedParams = await searchParams;
-  
-  // 2. 이제 값을 문자열로 변환합니다.
   const filter = (resolvedParams.filter as string) || "all";
-
-  // 3. 데이터 Fetching
   const posts = await getPosts(filter);
 
   return (

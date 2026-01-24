@@ -1,19 +1,20 @@
 // src/types/index.ts
 
-// 기존 내용이 있다면 그 아래에 추가
+export type PostType = "TUBE" | "RIPPLE" | "PIECE";
+
 export interface Post {
-  id: number;
-  author: {
-    name: string;
-    avatar: string;
-    handle: string;
-  };
+  id: string;
+  type: PostType;
+  festivalId: string;
+  festivalName: string;
+  festivalColor: string; // Tailwind class (ex: text-yellow-400) or Hex
   content: string;
-  images?: string[];
-  timestamp: string;
-  likes: number;
-  comments: number;
-  isLiked?: boolean;
-  isBookmarked?: boolean;
-  festivalTag?: string; // 페스티벌 태그 (선택)
+  image?: string; // PIECE 타입용
+  createdAt: string; // ISO String or "방금 전"
+  user: {
+    id: string;
+    name: string;
+    avatar?: string;
+  };
+  tubeStatus?: "OPEN" | "CLOSED"; // TUBE 타입용
 }

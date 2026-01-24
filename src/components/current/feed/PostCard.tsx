@@ -1,7 +1,6 @@
 // src/components/current/feed/PostCard.tsx
 "use client";
-
-import { Post } from "@/app/current/page";
+import { Post } from "@/types";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge"; // Shadcn
 import { Card } from "@/components/ui/card";   // Shadcn

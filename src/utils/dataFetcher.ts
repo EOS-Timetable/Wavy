@@ -848,8 +848,7 @@ export const getFestivalContents = async (
       category: item.category,
       categoryType: typeof item.category,
       categoryLength: item.category?.length,
-      categoryCharCodes: item.category ? Array.from(item.category).map((c: string) => c.charCodeAt(0)) : null
-    })));
+      categoryCharCodes: item.category ? Array.from(item.category as string).map((c) => c.charCodeAt(0)) : null    })));
   }
   if (allError) {
     console.error("[getFestivalContents] Error fetching all contents:", allError);
