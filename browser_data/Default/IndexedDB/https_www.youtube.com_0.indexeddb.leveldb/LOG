@@ -1,7 +1,0 @@
-2026/01/24-03:33:50.146 a930 Reusing MANIFEST C:\GitHub\wavy-web\browser_data\Default\IndexedDB\https_www.youtube.com_0.indexeddb.leveldb/MANIFEST-000001
-2026/01/24-03:33:50.146 a930 Recovering log #3
-2026/01/24-03:33:50.147 a930 Reusing old log C:\GitHub\wavy-web\browser_data\Default\IndexedDB\https_www.youtube.com_0.indexeddb.leveldb/000003.log 
-2026/01/24-03:33:50.160 2a68 Level-0 table #5: started
-2026/01/24-03:33:50.164 2a68 Level-0 table #5: 30927 bytes OK
-2026/01/24-03:33:50.166 2a68 Delete type=0 #3
-2026/01/24-03:33:50.173 a930 Manual compaction at level-0 from '\x00\x02\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x03\x00\x00\x00' @ 0 : 0; will stop at (end)

@@ -6,7 +6,14 @@ import Link from 'next/link';
 import { Filter, Clock, AlertCircle, CheckCircle, XCircle, Zap } from 'lucide-react';
 import { createClient } from '@/lib/supabase';
 import StagingPreview from '@/components/admin/StagingPreview';
+// 컴포넌트 임포트 (경로 확인 필요)
+import ThisYearSection from '@/components/home/ThisYearSection';
+import PerformanceVideosSection from '@/components/artist/PerformanceVideosSection';
+import FestivalHeader from '@/components/festival/FestivalHeader';
 
+// --- [1] 타입 정의 및 어댑터 로직 시작 ---
+
+// 1. StagedContent 타입 (DB 스키마 기준)
 type StagingStatus = 'PENDING' | 'ALLOWED' | 'REJECTED';
 type SortField = 'created_at' | 'updated_at' | 'last_crawled_at';
 type SortOrder = 'asc' | 'desc';
@@ -16,14 +23,71 @@ interface StagedContent {
   category: string;
   source_name: string | null;
   source_url: string | null;
-  raw_data: any;
+  raw_data: any; // DB의 JSONB
   status: StagingStatus;
-  ocr_status: string | null;
   rejection_reason: string | null;
   created_at: string;
   updated_at: string;
   last_crawled_at: string | null;
 }
+
+// 2. ThisYearSection용 데이터 타입 (컴포넌트 Props 복사)
+interface ThisYearContent {
+  id: string;
+  category: "라인업" | "티켓" | "MD" | "이벤트" | "현장안내" | "관련글";
+  title: string;
+  date: string;
+  linkUrl: string;
+  imageUrl?: string;
+  isNew?: boolean;
+}
+
+// 3. PerformanceVideosSection용 데이터 타입
+interface PerformanceVideo {
+  id: number; // 컴포넌트가 number를 요구함
+  title: string;
+  thumbnailUrl?: string;
+  videoUrl: string;
+}
+
+// 4. [핵심] 어댑터 함수: Raw Data -> ThisYearContent 변환
+const adaptToThisYear = (content: StagedContent): ThisYearContent => {
+  const { raw_data, category, created_at, source_url } = content;
+
+  // (1) 카테고리 매핑
+  let targetCategory: ThisYearContent["category"] = "관련글";
+  if (category === "OFFICIAL_LINEUP") targetCategory = "라인업";
+  else if (category === "OFFICIAL_TIMETABLE") targetCategory = "현장안내"; // 타임테이블은 현장안내로
+  else if (category === "OFFICIAL_NOTICE") targetCategory = "이벤트";
+  else if (category === "EXTERNAL_CONTENT") targetCategory = "관련글";
+
+  // (2) 날짜 포맷팅 (YYYY.MM.DD)
+  const dateObj = new Date(raw_data.date || created_at);
+  const formattedDate = `${dateObj.getFullYear()}.${String(dateObj.getMonth() + 1).padStart(2, '0')}.${String(dateObj.getDate()).padStart(2, '0')}`;
+
+  return {
+    id: content.id,
+    category: targetCategory,
+    // raw_data의 다양한 키값 대응 (title > caption > text > name 순)
+    title: raw_data.title || raw_data.caption || raw_data.text || raw_data.name || "제목 없음",
+    date: formattedDate,
+    linkUrl: raw_data.link_url || raw_data.url || source_url || "",
+    // 이미지 키값 대응
+    imageUrl: raw_data.image_url || raw_data.thumbnail_url || raw_data.poster_url || raw_data.img_url,
+    isNew: true,
+  };
+};
+
+// 5. [핵심] 어댑터 함수: Raw Data -> PerformanceVideo 변환
+const adaptToVideo = (content: StagedContent): PerformanceVideo => {
+  const { raw_data, source_url } = content;
+  return {
+    id: 0, // 프리뷰용 임시 ID
+    title: raw_data.title || raw_data.name || "영상 제목 없음",
+    videoUrl: raw_data.video_url || raw_data.url || source_url || "",
+    thumbnailUrl: raw_data.thumbnail_url || raw_data.image_url,
+  };
+};
 
 interface RejectionModalProps {
   isOpen: boolean;
@@ -525,23 +589,52 @@ export default function StagingPage() {
                     )}
                   </div>
 
-                  {/* 우측: 프리뷰 */}
-                  <div className="bg-gray-50 rounded-xl p-4 h-full">
-                    <div className="text-xs text-gray-500 mb-3 flex justify-between items-center">
-                      <span>실제 컴포넌트 미리보기</span>
-                      <span className="bg-gray-200 text-gray-600 px-2 py-0.5 rounded text-[10px]">
-                        {content.category}
-                      </span>
+                  <div className="p-6 bg-[#161b29] min-h-[300px] flex flex-col justify-center items-center relative">
+                    <div className="absolute top-4 left-4 text-xs text-gray-500 font-bold uppercase tracking-wider">
+                      Preview
                     </div>
-                    
-                    {/* StagingPreview 컴포넌트 주입 */}
-                    <div className="bg-black rounded-lg overflow-hidden min-h-[200px] flex flex-col justify-center">
-                        <StagingPreview 
-                            category={content.category} 
-                            rawData={content.raw_data} 
-                        />
+
+                    <div className="w-full max-w-sm">
+                        {/* 1. FESTIVAL_BASE 프리뷰 */}
+                        {content.category === 'FESTIVAL_BASE' && (
+                          <div className="text-white">
+                            <FestivalHeader 
+                                name={content.raw_data.name} 
+                                startDate={content.raw_data.start_date} 
+                                endDate={content.raw_data.end_date} 
+                                placeName={content.raw_data.place_name}
+                                formatDate={(d) => d}
+                            />
+                            {content.raw_data.poster_url && (
+                                <img src={content.raw_data.poster_url} alt="poster" className="w-32 mt-4 rounded shadow-lg opacity-80" />
+                            )}
+                          </div>
+                        )}
+
+                        {/* 2. OFFICIAL / EXTERNAL 프리뷰 (ThisYearSection) */}
+                        {['OFFICIAL_LINEUP', 'OFFICIAL_TIMETABLE', 'OFFICIAL_NOTICE', 'EXTERNAL_CONTENT'].includes(content.category) && (
+                           <ThisYearSection 
+                              festivalName="Preview Festival"
+                              contents={[adaptToThisYear(content)]}
+                              withPagePadding={false}
+                           />
+                        )}
+
+                        {/* 3. ARCHIVE_DATA 프리뷰 (PerformanceVideosSection) */}
+                        {content.category === 'ARCHIVE_DATA' && (
+                           <div className="text-white">
+                             <PerformanceVideosSection videos={[adaptToVideo(content)]} />
+                           </div>
+                        )}
+
+                        {/* 지원하지 않는 카테고리 */}
+                        {!['FESTIVAL_BASE', 'OFFICIAL_LINEUP', 'OFFICIAL_TIMETABLE', 'OFFICIAL_NOTICE', 'EXTERNAL_CONTENT', 'ARCHIVE_DATA'].includes(content.category) && (
+                            <div className="text-gray-500 text-center text-sm">
+                                미리보기를 지원하지 않는 형식입니다.
+                            </div>
+                        )}
                     </div>
-                  </div>
+                </div>
                 </div>
               </div>
             );

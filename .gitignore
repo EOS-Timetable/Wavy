@@ -52,3 +52,14 @@ __pycache__/
 venv/
 .venv/
 workers/**/venv/
+workers/**/artist_crawl.py
+
+# 브라우저 자동화 관련 데이터 무시
+browser_data/
+
+# Python/OCR 작업 관련 생성 파일 무시
+workers/ocr/.cache
+workers/ocr/artists_rows_updated.csv
+workers/ocr/artists_rows_filled_complete.csv
+# 만약 모든 csv 결과물을 무시하고 싶다면 아래처럼 써도 됩니다
+# workers/ocr/*.csv
